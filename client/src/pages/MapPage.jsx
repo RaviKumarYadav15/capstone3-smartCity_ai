@@ -17,7 +17,18 @@ export default function MapPage() {
   const [prediction, setPrediction] = useState(null);
   const [filter, setFilter] = useState('all');
   const [layer, setLayer] = useState('osm');
+  const [targetLocation, setTargetLocation] = useState(null);
+  const [targetId, setTargetId] = useState(null);
   const [error, setError] = useState('');
+
+  const handleLocate = (report) => {
+    setTargetLocation([report.lat, report.lng]);
+    setTargetId(report.id);
+    const el = document.getElementById('live-incident-map');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   const load = useCallback(async () => {
     try {
@@ -60,7 +71,7 @@ export default function MapPage() {
       {/* Top 2-Column Section: Map on Left, Two Status Rows on Right */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         {/* Left Column: Live City Incident Map */}
-        <div className="lg:col-span-7 xl:col-span-8 bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col justify-between">
+        <div id="live-incident-map" className="lg:col-span-7 xl:col-span-8 bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col justify-between">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-3">
             <div>
               <h1 className="text-xl sm:text-2xl font-black text-slate-900 m-0">Live City Incident Map</h1>
@@ -82,7 +93,7 @@ export default function MapPage() {
           {error && <p className="error p-3 rounded-xl bg-red-50 border border-red-200 my-2 text-xs">{error}</p>}
           
           <div className="rounded-2xl overflow-hidden border border-slate-200 flex-1 min-h-[380px] sm:min-h-[440px]">
-            <ReportsMap reports={visible} layer={layer} />
+            <ReportsMap reports={visible} layer={layer} targetLocation={targetLocation} targetId={targetId} />
           </div>
 
           <div className="flex items-center justify-between text-xs text-slate-500 mt-3 px-1">
@@ -190,7 +201,7 @@ export default function MapPage() {
         ) : (
           <div className="grid cards">
             {visible.map((r) => (
-              <ReportCard key={r.id} report={r} onChange={replace} />
+              <ReportCard key={r.id} report={r} onChange={replace} onLocate={handleLocate} />
             ))}
           </div>
         )}

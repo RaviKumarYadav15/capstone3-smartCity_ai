@@ -5,7 +5,7 @@ import { useToast } from './Toast.jsx';
 import ReportAnalysisModal from './ReportAnalysisModal.jsx';
 import { EMOJI, formatDate, statusLabel } from '../utils/format.js';
 
-export default function ReportCard({ report: r, onChange }) {
+export default function ReportCard({ report: r, onChange, onLocate }) {
   const { user, openAuthModal } = useAuth();
   const toast = useToast();
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
@@ -59,7 +59,19 @@ export default function ReportCard({ report: r, onChange }) {
 
         <div>
           <div className="meta flex justify-between items-center text-xs text-slate-500 pt-2 border-t border-slate-100 mb-1">
-            <span>📍 {r.lat.toFixed(3)}, {r.lng.toFixed(3)}</span>
+            {onLocate ? (
+              <button
+                type="button"
+                onClick={() => onLocate(r)}
+                className="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                title="Click to locate on the map above"
+              >
+                <span>📍</span>
+                <span>{r.lat.toFixed(3)}, {r.lng.toFixed(3)}</span>
+              </button>
+            ) : (
+              <span>📍 {r.lat.toFixed(3)}, {r.lng.toFixed(3)}</span>
+            )}
             <span>{formatDate(r.createdAt)}</span>
           </div>
           <div className="meta flex justify-between items-center text-xs text-slate-500 mb-3">
@@ -107,13 +119,23 @@ export default function ReportCard({ report: r, onChange }) {
             </span>
           </div>
 
-          <div className="pt-2 border-t border-slate-100 mt-2">
+          <div className="pt-2 border-t border-slate-100 mt-2 flex items-center gap-2">
             <button
-              className="w-full py-2 px-3 rounded-full text-xs font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs hover:shadow-xs"
+              className="flex-1 py-2 px-3 rounded-full text-xs font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs hover:shadow-xs"
               onClick={() => setShowAnalysisModal(true)}
             >
               <span>📋</span> View in Details
             </button>
+            {onLocate && (
+              <button
+                type="button"
+                className="py-2 px-3 rounded-full text-xs font-bold text-blue-700 bg-blue-50/90 hover:bg-blue-100 border border-blue-200 transition-colors flex items-center justify-center gap-1 cursor-pointer shadow-2xs hover:shadow-xs shrink-0"
+                onClick={() => onLocate(r)}
+                title="Locate this incident on the map above"
+              >
+                <span>📍</span> Locate on Map
+              </button>
+            )}
           </div>
         </div>
       </div>
