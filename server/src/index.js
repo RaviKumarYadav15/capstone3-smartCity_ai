@@ -4,13 +4,27 @@ try {
   tls.DEFAULT_MAX_VERSION = 'TLSv1.2';
 } catch {}
 
-import { env } from './config/env.js';
-import { connectDb } from './config/db.js';
-import { createApp } from './app.js';
+try {
+  const { env } = await import('./config/env.js');
+  const { connectDb } = await import('./config/db.js');
+  const { createApp } = await import('./app.js');
 
-await connectDb();
-const server = createApp().listen(env.port, () => console.log(`API listening on http://localhost:${env.port}`));
+  console.log('Initiating database connection...');
+  await connectDb();
+  console.log('Database connected successfully.');
 
-const shutdown = () => server.close(() => process.exit(0));
-process.on('SIGINT', shutdown);
-process.on('SIGTERM', shutdown);
+  const port = env.port || 5000;
+  const server = createApp().listen(port, '0.0.0.0', () => {
+    console.log(`Server listening on port ${port} (0.0.0.0)`);
+  });
+
+  const shutdown = () => {
+    console.log('Received termination signal, closing server...');
+    server.close(() => process.exit(0));
+  };
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
+} catch (err) {
+  console.error('Fatal initialization error on server startup:', err);
+  process.exit(1);
+}
