@@ -16,7 +16,7 @@ export default function MapPage() {
   const [stats, setStats] = useState(null);
   const [prediction, setPrediction] = useState(null);
   const [filter, setFilter] = useState('all');
-  const [layer, setLayer] = useState('light');
+  const [layer, setLayer] = useState('osm');
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {

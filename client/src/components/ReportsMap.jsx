@@ -2,14 +2,32 @@ import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
 import { DEFAULT_CENTER, EMOJI, SEVERITY_COLOR } from '../utils/format.js';
 
 export const LAYERS = {
-  light: { name: 'Clean Map (CARTO)', url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', attr: '© OpenStreetMap contributors © CARTO' },
-  osm: { name: 'OpenStreetMap (Standard)', url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', attr: '© OpenStreetMap contributors' },
+  osm: {
+    name: 'OpenStreetMap (Standard)',
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attr: '© OpenStreetMap contributors',
+  },
+  esriStreet: {
+    name: 'Clean Street (Esri)',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+    attr: 'Tiles © Esri',
+  },
+  satellite: {
+    name: 'Satellite View (Esri)',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attr: 'Source: Esri, Maxar, Earthstar Geographics',
+  },
+  topo: {
+    name: 'Topographic (OpenTopo)',
+    url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+    attr: '© OpenStreetMap contributors, SRTM | © OpenTopoMap',
+  },
 };
 
 export default function ReportsMap({ reports, layer }) {
   const first = reports[0];
   const center = first ? [first.lat, first.lng] : DEFAULT_CENTER;
-  const l = LAYERS[layer] || LAYERS.light;
+  const l = LAYERS[layer] || LAYERS.osm;
   return (
     <MapContainer center={center} zoom={13} className="map">
       <TileLayer key={layer} attribution={l.attr} url={l.url} />

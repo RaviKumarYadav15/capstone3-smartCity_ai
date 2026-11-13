@@ -16,9 +16,10 @@ export default function Report() {
   const [blob, setBlob] = useState(null);
   const [preview, setPreview] = useState(null);
   const [pos, setPos] = useState(DEFAULT_CENTER);
-  const [category, setCategory] = useState('Pothole');
+  const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
   const [busy, setBusy] = useState(false);
+  const [generatingDesc, setGeneratingDesc] = useState(false);
   const [analysisReport, setAnalysisReport] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [validationError, setValidationError] = useState('');
@@ -84,18 +85,59 @@ export default function Report() {
     );
   };
 
+  const handleGenerateAiDescription = async () => {
+    if (!blob) {
+      toast.error('Please upload or take a photo first');
+      return;
+    }
+    if (!user) {
+      openAuthModal();
+      return;
+    }
+    setGeneratingDesc(true);
+    setValidationError('');
+    try {
+      const fd = new FormData();
+      fd.append('image', blob, 'issue.jpg');
+      const res = await api.upload('/reports/describe', fd);
+      if (res.description) {
+        setDescription(res.description);
+      }
+      if (res.category && (!category || category === '')) {
+        setCategory(res.category);
+      }
+      toast.success(`AI generated description & detected category (${res.category})`);
+    } catch (err) {
+      const msg = err.message || 'Failed to analyze photo with AI';
+      setValidationError(msg);
+      toast.error(msg);
+    } finally {
+      setGeneratingDesc(false);
+    }
+  };
+
   const submit = async (e) => {
     e.preventDefault();
     if (!user) {
       openAuthModal();
       return;
     }
+    if (!blob && !category) {
+      toast.error('Please select an issue category');
+      return;
+    }
+    if (!blob && !description.trim()) {
+      toast.error('Please describe the issue or attach a photo');
+      return;
+    }
+    setBusy(true);
+    setValidationError('');
     try {
       const form = new FormData();
       if (blob) form.append('image', blob, 'photo.jpg');
       form.append('lat', pos[0]);
       form.append('lng', pos[1]);
-      form.append('category', category);
+      if (category) form.append('category', category);
       if (description.trim()) {
         form.append('description', description.trim());
       }
@@ -105,7 +147,7 @@ export default function Report() {
       setBlob(null);
       setPreview(null);
       setDescription('');
-      setCategory('Pothole');
+      setCategory('');
       setValidationError('');
 
       // Open immediate analysis report popup
@@ -239,14 +281,18 @@ export default function Report() {
             {/* Step 3: Category & Description */}
             <div>
               <label className="text-sm font-bold text-slate-800 mb-1.5 flex items-center justify-between">
-                <span>Step 3: Issue Category</span>
-                <span className="text-xs text-slate-400 font-normal">Select problem type</span>
+                <span>Step 3: Issue Category {!blob && '(Required)'}</span>
+                <span className="text-xs text-slate-400 font-normal">
+                  {blob ? 'Optional (AI auto-detects from photo)' : 'Select problem type'}
+                </span>
               </label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
+                required={!blob}
                 className="w-full py-2.5 px-3.5 rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
               >
+                <option value="">-- Select an Issue Category --</option>
                 {CATEGORIES.map((c) => (
                   <option key={c} value={c}>{c}</option>
                 ))}
@@ -254,18 +300,33 @@ export default function Report() {
             </div>
 
             <div>
-              <label className="text-sm font-bold text-slate-800 mb-1.5 flex items-center justify-between">
-                <span>Description {!blob ? '(Required)' : '(Optional)'}</span>
-                <span className="text-xs text-slate-400 font-normal">
-                  {!blob ? 'Min 10 characters' : 'Add landmarks or notes for field workers'}
-                </span>
-              </label>
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                <label className="text-sm font-bold text-slate-800">
+                  Description {!blob ? '(Required)' : '(Optional)'}
+                </label>
+                {blob && (
+                  <button
+                    type="button"
+                    onClick={handleGenerateAiDescription}
+                    disabled={generatingDesc || busy}
+                    className="text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-1 rounded-full transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs hover:shadow-xs disabled:opacity-50"
+                    title="Ask Gemini AI to analyze the photo and write a clear civic description"
+                  >
+                    <span>✨</span>
+                    <span>{generatingDesc ? 'Analyzing with AI...' : 'Generate Description with AI'}</span>
+                  </button>
+                )}
+              </div>
               <textarea
                 rows={3}
                 minLength={!blob ? 10 : 0}
                 maxLength={500}
                 required={!blob}
-                placeholder={blob ? "Add any extra details, landmarks, or notes (optional)" : "Describe the problem clearly (at least 10 characters)"}
+                placeholder={
+                  blob
+                    ? "Add notes or click 'Generate Description with AI' above to auto-write from photo..."
+                    : "Describe the problem clearly (at least 10 characters)..."
+                }
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
@@ -274,9 +335,9 @@ export default function Report() {
             <button
               type="submit"
               className="w-full bg-gradient-to-b from-blue-900 to-blue-600 hover:from-blue-950 hover:to-blue-700 text-white font-bold py-3.5 px-6 rounded-full shadow-md transition-all duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-base"
-              disabled={busy || (!blob && !description.trim())}
+              disabled={busy || generatingDesc || (!blob && (!category || !description.trim()))}
             >
-              {busy ? 'Verifying with AI & Saving' : 'Submit Civic Report'}
+              {busy ? 'Verifying with AI & Saving...' : 'Submit Civic Report'}
             </button>
           </form>
         </div>

@@ -35,6 +35,31 @@ router.get('/:id', asyncHandler(async (req, res) => {
   res.json({ report: serializeReport(report, req.user?._id, req.user?.role) });
 }));
 
+// Instant AI image description and category detector
+router.post('/describe', requireAuth, perUser(20), imageUpload, asyncHandler(async (req, res) => {
+  if (!req.file) throw new HttpError(400, 'Please select or upload a photo first');
+  const type = detectImageType(req.file.buffer);
+  if (!type) throw new HttpError(400, 'Only JPEG, PNG or WebP images are supported');
+  if (!aiEnabled()) throw new HttpError(503, 'AI features are not configured');
+
+  const analysis = await analyzeIssueImage({ buffer: req.file.buffer, mime: type.mime });
+  if (analysis.isValid === false) {
+    return res.status(400).json({
+      isValid: false,
+      rejectionReason: analysis.rejectionReason || 'The uploaded photo does not appear to show a valid civic infrastructure issue.',
+    });
+  }
+
+  res.json({
+    isValid: true,
+    category: analysis.category || 'other',
+    description: analysis.description || '',
+    severity: analysis.severity || 'medium',
+    department: analysis.department || '',
+    priority: analysis.priority || 5,
+  });
+}));
+
 router.post('/', requireAuth, perUser(10), imageUpload, asyncHandler(async (req, res) => {
   const body = createSchema.parse(req.body);
   if (!req.file && !body.description) throw new HttpError(400, 'Attach a photo or describe the issue');
