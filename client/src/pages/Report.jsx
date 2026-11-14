@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { useAuth } from '../AuthContext.jsx';
@@ -26,7 +26,19 @@ export default function Report() {
   const [aiEnabled, setAiEnabled] = useState(true);
   const [blob, setBlob] = useState(null);
   const [preview, setPreview] = useState(null);
-  const [pos, setPos] = useState(DEFAULT_CENTER);
+  const [pos, setPos] = useState(() => {
+    try {
+      const saved = localStorage.getItem('smartcity_last_pos');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length === 2 && !isNaN(parsed[0]) && !isNaN(parsed[1])) {
+          return parsed;
+        }
+      }
+    } catch {}
+    return DEFAULT_CENTER;
+  });
+  const [locating, setLocating] = useState(false);
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
   const [busy, setBusy] = useState(false);
@@ -191,17 +203,34 @@ export default function Report() {
     }
   };
 
-  const detect = () => {
-    if (!navigator.geolocation) return toast('Geolocation is not supported on this device');
+  const detect = useCallback((silent = false) => {
+    if (!navigator.geolocation) {
+      if (!silent) toast('Geolocation is not supported on this device');
+      return;
+    }
+    setLocating(true);
     navigator.geolocation.getCurrentPosition(
       (p) => {
-        setPos([p.coords.latitude, p.coords.longitude]);
-        toast('Location pin updated to your GPS coordinates');
+        setLocating(false);
+        const newPos = [p.coords.latitude, p.coords.longitude];
+        setPos(newPos);
+        try {
+          localStorage.setItem('smartcity_last_pos', JSON.stringify(newPos));
+        } catch {}
+        if (!silent) toast.success('Location pin updated to your GPS coordinates');
       },
-      () => toast('Could not get GPS location — click the map to place the pin'),
+      () => {
+        setLocating(false);
+        if (!silent) toast('Could not get GPS location — click the map to place the pin');
+      },
       { enableHighAccuracy: true, timeout: 8000 }
     );
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    // Attempt auto-detecting user location seamlessly on mount
+    detect(true);
+  }, [detect]);
 
   const toggleListening = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -604,10 +633,18 @@ export default function Report() {
                 <span className="text-sm font-bold text-slate-800">Step 2: Incident Location</span>
                 <button
                   type="button"
-                  className="text-xs font-semibold px-3.5 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
-                  onClick={detect}
+                  disabled={locating}
+                  className="text-xs font-semibold px-3.5 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-60"
+                  onClick={() => detect(false)}
                 >
-                  📍 Detect My Location
+                  {locating ? (
+                    <>
+                      <span className="w-3 h-3 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin"></span>
+                      <span>Locating GPS...</span>
+                    </>
+                  ) : (
+                    <span>📍 Detect My Location</span>
+                  )}
                 </button>
               </div>
               <LocationPicker position={pos} onPick={setPos} />
@@ -621,32 +658,51 @@ export default function Report() {
                       {pos[0].toFixed(5)}, {pos[1].toFixed(5)}
                     </span>
                   </div>
+
+                  {/* Status Indicator: Locating, Resolving, or Resolved */}
+                  <div className="flex items-center gap-1.5 text-[11px]">
+                    {locating ? (
+                      <span className="inline-flex items-center gap-1.5 text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200 font-semibold shadow-2xs">
+                        <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping"></span>
+                        Locating GPS...
+                      </span>
+                    ) : isResolvingAddress ? (
+                      <span className="inline-flex items-center gap-1.5 text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200 font-semibold shadow-2xs">
+                        <span className="w-2.5 h-2.5 border-2 border-amber-600/30 border-t-amber-600 rounded-full animate-spin"></span>
+                        Resolving address...
+                      </span>
+                    ) : address?.formatted ? (
+                      <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 font-semibold shadow-2xs">
+                        <span>✓</span> Address resolved
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
 
                 {/* Structured Address Badges: Area, City, State, Country */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-slate-200/70">
                   <div className="bg-white p-2 rounded-xl border border-slate-200/80">
                     <span className="text-[10px] uppercase font-bold text-slate-400 block">Area / Locality</span>
-                    <span className="font-semibold text-slate-800 text-xs truncate block" title={address?.area || 'Resolving...'}>
-                      {address?.area || '—'}
+                    <span className="font-semibold text-slate-800 text-xs truncate block" title={address?.area || (isResolvingAddress ? 'Resolving...' : '—')}>
+                      {address?.area || (isResolvingAddress ? 'Resolving...' : '—')}
                     </span>
                   </div>
                   <div className="bg-white p-2 rounded-xl border border-slate-200/80">
                     <span className="text-[10px] uppercase font-bold text-slate-400 block">City / Town</span>
-                    <span className="font-semibold text-slate-800 text-xs truncate block" title={address?.city || 'Resolving...'}>
-                      {address?.city || '—'}
+                    <span className="font-semibold text-slate-800 text-xs truncate block" title={address?.city || (isResolvingAddress ? 'Resolving...' : '—')}>
+                      {address?.city || (isResolvingAddress ? 'Resolving...' : '—')}
                     </span>
                   </div>
                   <div className="bg-white p-2 rounded-xl border border-slate-200/80">
                     <span className="text-[10px] uppercase font-bold text-slate-400 block">State</span>
-                    <span className="font-semibold text-slate-800 text-xs truncate block" title={address?.state || 'Resolving...'}>
-                      {address?.state || '—'}
+                    <span className="font-semibold text-slate-800 text-xs truncate block" title={address?.state || (isResolvingAddress ? 'Resolving...' : '—')}>
+                      {address?.state || (isResolvingAddress ? 'Resolving...' : '—')}
                     </span>
                   </div>
                   <div className="bg-white p-2 rounded-xl border border-slate-200/80">
                     <span className="text-[10px] uppercase font-bold text-slate-400 block">Country (PIN)</span>
                     <span className="font-semibold text-slate-800 text-xs truncate block" title={`${address?.country || ''} ${address?.pincode ? `(${address.pincode})` : ''}`}>
-                      {address?.country ? `${address.country} ${address?.pincode ? `(${address.pincode})` : ''}` : '—'}
+                      {address?.country ? `${address.country} ${address?.pincode ? `(${address.pincode})` : ''}` : (isResolvingAddress ? 'Resolving...' : '—')}
                     </span>
                   </div>
                 </div>

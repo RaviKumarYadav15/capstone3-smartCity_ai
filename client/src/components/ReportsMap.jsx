@@ -25,8 +25,10 @@ export const LAYERS = {
   },
 };
 
-function MapController({ targetLocation, targetId, markerRefs }) {
+function MapController({ targetLocation, targetId, markerRefs, centerLocation, zoom, fitBoundsCoords }) {
   const map = useMap();
+
+  // 1. Target location selected (e.g. from ReportCard "Locate" click)
   useEffect(() => {
     if (targetLocation) {
       map.flyTo(targetLocation, 16, { duration: 1.2 });
@@ -38,19 +40,80 @@ function MapController({ targetLocation, targetId, markerRefs }) {
       }
     }
   }, [targetLocation, targetId, map, markerRefs]);
+
+  // 2. City center or user live location changed
+  useEffect(() => {
+    if (centerLocation && !targetLocation) {
+      map.flyTo(centerLocation, zoom || 13, { duration: 1.2 });
+    }
+  }, [centerLocation, zoom, targetLocation, map]);
+
+  // 3. Fit bounds across nationwide/all reports when "All Cities" is active
+  useEffect(() => {
+    if (fitBoundsCoords && fitBoundsCoords.length > 1 && !targetLocation && !centerLocation) {
+      try {
+        map.fitBounds(fitBoundsCoords, { padding: [40, 40], maxZoom: 14 });
+      } catch {}
+    }
+  }, [fitBoundsCoords, targetLocation, centerLocation, map]);
+
   return null;
 }
 
-export default function ReportsMap({ reports, layer, targetLocation, targetId }) {
+export default function ReportsMap({
+  reports,
+  layer,
+  targetLocation,
+  targetId,
+  centerLocation,
+  userLocation,
+  zoom = 13,
+  fitBoundsCoords,
+}) {
   const markerRefs = useRef({});
   const first = reports[0];
-  const center = targetLocation || (first ? [first.lat, first.lng] : DEFAULT_CENTER);
+  const center =
+    targetLocation ||
+    centerLocation ||
+    userLocation ||
+    (first ? [first.lat, first.lng] : DEFAULT_CENTER);
   const l = LAYERS[layer] || LAYERS.osm;
 
   return (
-    <MapContainer center={center} zoom={13} className="map">
+    <MapContainer center={center} zoom={zoom} className="map">
       <TileLayer key={layer} attribution={l.attr} url={l.url} />
-      <MapController targetLocation={targetLocation} targetId={targetId} markerRefs={markerRefs} />
+      <MapController
+        targetLocation={targetLocation}
+        targetId={targetId}
+        markerRefs={markerRefs}
+        centerLocation={centerLocation}
+        zoom={zoom}
+        fitBoundsCoords={fitBoundsCoords}
+      />
+
+      {/* Live User Location Pin */}
+      {userLocation && (
+        <CircleMarker
+          center={userLocation}
+          radius={12}
+          pathOptions={{
+            color: '#ffffff',
+            weight: 3,
+            fillColor: '#2563eb',
+            fillOpacity: 0.95,
+          }}
+        >
+          <Popup>
+            <div className="p-1 min-w-[160px]">
+              <strong className="text-blue-700 font-bold block mb-0.5">📍 You Are Here</strong>
+              <p className="text-xs text-slate-600 m-0 leading-relaxed">
+                Your live GPS coordinates. Showing civic infrastructure near you.
+              </p>
+            </div>
+          </Popup>
+        </CircleMarker>
+      )}
+
       {reports.map((r) => {
         const isTarget = r.id === targetId;
         return (
