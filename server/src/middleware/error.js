@@ -12,7 +12,11 @@ export function errorHandler(err, _req, res, _next) {
   if (err instanceof multer.MulterError) {
     return res.status(400).json({ error: err.code === 'LIMIT_FILE_SIZE' ? 'Image must be 3 MB or smaller' : err.message });
   }
-  if (err.name === 'CastError' || err.name === 'ValidationError') return res.status(400).json({ error: 'Invalid input' });
+  if (err.name === 'ValidationError') {
+    const msg = Object.values(err.errors || {}).map((e) => e.message).join('; ');
+    return res.status(400).json({ error: msg || 'Invalid input' });
+  }
+  if (err.name === 'CastError') return res.status(400).json({ error: 'Invalid identifier or data type' });
   if (err.code === 11000) return res.status(409).json({ error: 'That value already exists' });
   const status = err.status || 500;
   if (status >= 500) console.error(err);

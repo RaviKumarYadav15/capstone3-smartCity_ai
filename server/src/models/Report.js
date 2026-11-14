@@ -7,11 +7,11 @@ const reportSchema = new mongoose.Schema({
   category: { type: String, enum: CATEGORIES, required: true },
   severity: { type: String, enum: LEVELS, required: true },
   risk: { type: String, enum: LEVELS, default: 'medium' },
-  description: { type: String, required: true, maxlength: 1000 },
-  department: { type: String, maxlength: 80 },
+  description: { type: String, required: true, maxlength: 2000 },
+  department: { type: String, maxlength: 200 },
   priority: { type: Number, min: 1, max: 10, default: 5 },
-  fixTime: { type: String, maxlength: 40 },
-  steps: { type: String, maxlength: 500 },
+  fixTime: { type: String, maxlength: 100 },
+  steps: { type: String, maxlength: 3000 },
   location: {
     type: { type: String, enum: ['Point'], default: 'Point' },
     coordinates: { type: [Number], required: true }, // [lng, lat]

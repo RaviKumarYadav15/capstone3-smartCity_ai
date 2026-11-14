@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { useAuth } from '../AuthContext.jsx';
 import { useToast } from './Toast.jsx';
 import Modal from './Modal.jsx';
+import VoiceInputButton from './VoiceInputButton.jsx';
 import { resizeImage } from '../utils/resizeImage.js';
 import { DISPUTE_CATEGORIES } from '../utils/format.js';
 
@@ -102,15 +103,27 @@ export default function DisputeForm({ tender, onClose, onDone }) {
           </div>
 
           <div>
-            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1">
-              On-Ground Observation (Minimum 20 characters)
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                On-Ground Observation (Minimum 20 characters)
+              </label>
+              <VoiceInputButton
+                onTranscript={(text) => {
+                  setDescription((prev) => {
+                    const trimmed = prev.trim();
+                    const merged = trimmed ? `${trimmed} ${text}` : text;
+                    return merged.slice(0, 2000);
+                  });
+                }}
+                title="Dictate observation by speaking"
+              />
+            </div>
             <textarea
               rows={4}
               required
               minLength={20}
               maxLength={2000}
-              placeholder="Describe what you directly witnessed at the site"
+              placeholder="Describe what you directly witnessed at the site (or use 'Voice Dictate' to speak)"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />

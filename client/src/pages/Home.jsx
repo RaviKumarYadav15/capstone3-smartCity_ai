@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext.jsx';
 import { api } from '../api.js';
 import { EMOJI, formatINR } from '../utils/format.js';
-import { BsBuilding, BsShieldCheck, BsCamera, BsCheckCircle, BsArrowRight } from 'react-icons/bs';
+import { BsBuilding, BsShieldCheck, BsCamera, BsCheckCircle, BsArrowRight, BsGeoAlt } from 'react-icons/bs';
 
 export default function Home() {
   const { user, openAuthModal } = useAuth();
@@ -61,18 +61,27 @@ export default function Home() {
           Report civic infrastructure issues with smart AI validation, track repair progress, and audit municipal tenders in plain language
         </p>
 
-        <div className="flex flex-wrap justify-center gap-4 mt-8">
+        {/* 3 Core Quick-Action Buttons (Optimized for both Desktop & Mobile Devices) */}
+        <div className="flex flex-wrap justify-center gap-3.5 mt-8 px-4">
           <button
             onClick={handleReportClick}
-            className="bg-gradient-to-b from-blue-900 to-blue-500 text-white px-8 py-3.5 rounded-full shadow-md hover:opacity-95 transition flex items-center gap-2 cursor-pointer font-medium text-sm md:text-base"
+            className="w-full sm:w-auto bg-gradient-to-b from-blue-900 to-blue-500 text-white px-7 py-3.5 rounded-full shadow-md hover:opacity-95 transition flex items-center justify-center gap-2 cursor-pointer font-medium text-sm md:text-base"
           >
             <BsCamera size={18} />
             <span>Report an Issue</span>
           </button>
 
           <button
+            onClick={() => navigate('/map')}
+            className="w-full sm:w-auto bg-white border border-slate-300 text-slate-700 hover:text-blue-600 hover:border-blue-300 px-7 py-3.5 rounded-full hover:bg-slate-50 transition flex items-center justify-center gap-2 cursor-pointer font-medium text-sm md:text-base shadow-xs"
+          >
+            <BsGeoAlt size={18} className="text-red-500" />
+            <span>City Issues Map</span>
+          </button>
+
+          <button
             onClick={() => navigate('/tenders')}
-            className="bg-white border border-blue-200 text-blue-600 px-8 py-3.5 rounded-full hover:bg-gradient-to-br from-blue-50 to-blue-100 transition flex items-center gap-2 cursor-pointer font-medium text-sm md:text-base shadow-xs"
+            className="w-full sm:w-auto bg-white border border-blue-200 text-blue-600 px-7 py-3.5 rounded-full hover:bg-gradient-to-br from-blue-50 to-blue-100 transition flex items-center justify-center gap-2 cursor-pointer font-medium text-sm md:text-base shadow-xs"
           >
             <BsBuilding size={18} />
             <span>Audit Tenders</span>

@@ -70,11 +70,12 @@ export default function MapPage() {
     <>
       {/* Top 2-Column Section: Map on Left, Two Status Rows on Right */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        {/* Left Column: Live City Incident Map */}
+        {/* Left Column: City Issues Map */}
         <div id="live-incident-map" className="lg:col-span-7 xl:col-span-8 bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col justify-between">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-3">
             <div>
-              <h1 className="text-xl sm:text-2xl font-black text-slate-900 m-0">Live City Incident Map</h1>
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 m-0">City Issues Map</h1>
+              <p className="text-xs text-slate-500 m-0 mt-0.5">Real-time public incident, hazard & infrastructure tracking</p>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Map Style:</span>

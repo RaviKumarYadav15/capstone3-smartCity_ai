@@ -15,8 +15,8 @@ const router = Router();
 const createSchema = z.object({
   lat: z.coerce.number().min(-90).max(90),
   lng: z.coerce.number().min(-180).max(180),
-  category: z.enum(CATEGORIES).optional(),
-  description: z.string().trim().min(10).max(500).optional(),
+  category: z.string().optional(),
+  description: z.string().trim().max(1000).optional().default(''),
 });
 
 router.get('/', asyncHandler(async (req, res) => {
@@ -83,17 +83,27 @@ router.post('/', requireAuth, perUser(10), imageUpload, asyncHandler(async (req,
     saved = await saveImage(req.file.buffer);
   }
   if (!fields) {
-    if (!body.category || !body.description) throw new HttpError(400, 'AI analysis is unavailable: choose a category and describe the issue');
-    fields = sanitizeIssueReport({ category: body.category, description: body.description, severity: 'medium', priority: 5 });
+    if (!body.category && !body.description) throw new HttpError(400, 'AI analysis is unavailable: choose a category or describe the issue');
+    fields = sanitizeIssueReport({
+      category: body.category || 'other',
+      description: body.description || 'Public issue reported by citizen',
+      severity: 'medium',
+      priority: 5,
+    });
   }
   if (fields.isValid === false) {
     throw new HttpError(400, fields.rejectionReason || 'The uploaded photo was rejected as non-civic.');
   }
-  if (body.category) {
+  if (body.category && CATEGORIES.includes(body.category)) {
     fields.category = body.category;
     if (DEPARTMENTS[body.category]) fields.department = DEPARTMENTS[body.category];
   }
-  if (body.description) fields.description = body.description; // the citizen's own words win
+  if (body.description && body.description.trim()) {
+    fields.description = body.description.trim(); // the citizen's own words win
+  }
+  if (!fields.description || !fields.description.trim()) {
+    fields.description = `${fields.category || 'Civic infrastructure'} issue reported by citizen.`;
+  }
 
   const report = await Report.create({
     ...fields,

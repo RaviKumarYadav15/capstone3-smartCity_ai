@@ -4,6 +4,7 @@ import { useAuth } from '../AuthContext.jsx';
 import { useToast } from '../components/Toast.jsx';
 import TenderModal from '../components/TenderModal.jsx';
 import DisputeForm from '../components/DisputeForm.jsx';
+import VoiceInputButton from '../components/VoiceInputButton.jsx';
 import { formatINR, formatDate, statusLabel } from '../utils/format.js';
 
 const FILTERS = [
@@ -95,14 +96,22 @@ export default function Tenders() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3 pt-2">
-          <input
-            className="search py-2.5 px-4 text-sm rounded-full border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 flex-1 min-w-[240px]"
-            type="search"
-            placeholder="Search tender ID, title, contractor, department"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            aria-label="Search tenders"
-          />
+          <div className="relative flex-1 min-w-[240px] flex items-center">
+            <input
+              className="search py-2.5 pl-4 pr-32 text-sm rounded-full border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-full"
+              type="search"
+              placeholder="Search tender ID, title, contractor, department"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              aria-label="Search tenders"
+            />
+            <div className="absolute right-2">
+              <VoiceInputButton
+                onTranscript={(text) => setQ((prev) => (prev ? `${prev} ${text}` : text))}
+                title="Voice search tenders"
+              />
+            </div>
+          </div>
           <div className="pills flex flex-wrap gap-1.5">
             {FILTERS.map(([k, label]) => (
               <button
@@ -159,15 +168,28 @@ export default function Tenders() {
             Warranty / Defect Liability Period (DLP)
             <input value={form.warranty} onChange={set('warranty')} placeholder="36 months defect liability" />
           </label>
-          <label className="full">
-            Engineering Scope & Technical Notes (used for AI legitimacy analysis & breakdown)
+          <div className="full">
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                Engineering Scope & Technical Notes (used for AI legitimacy analysis & breakdown)
+              </label>
+              <VoiceInputButton
+                onTranscript={(text) => {
+                  setForm((f) => ({
+                    ...f,
+                    specs: f.specs ? `${f.specs} ${text}` : text,
+                  }));
+                }}
+                title="Dictate engineering specifications"
+              />
+            </div>
             <textarea
               rows={3}
               value={form.specs}
               onChange={set('specs')}
-              placeholder="e.g. 50 mm VG-30 Bituminous Concrete wearing course over 150 mm WMM base; RCC box drain M25 grade"
+              placeholder="e.g. 50 mm VG-30 Bituminous Concrete wearing course over 150 mm WMM base; RCC box drain M25 grade (or click 'Voice Dictate' to speak)"
             />
-          </label>
+          </div>
           <button
             className="full w-full bg-gradient-to-b from-blue-900 to-blue-600 hover:from-blue-950 hover:to-blue-700 text-white font-bold py-3.5 px-6 rounded-full shadow-md transition-all cursor-pointer text-sm disabled:opacity-50"
             disabled={busy}

@@ -80,7 +80,7 @@ export default function Navbar() {
               }`
             }
           >
-            Live Map
+            City Issues Map
           </NavLink>
           <NavLink
             to="/tenders"
@@ -157,7 +157,17 @@ export default function Navbar() {
                     }}
                     className="w-full text-left text-xs font-semibold py-2 px-2 hover:text-black text-slate-600 hover:bg-slate-50 rounded-lg cursor-pointer transition"
                   >
-                    🗺️ View Live Map
+                    🗺️ City Issues Map
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowUserPopUp(false);
+                      navigate('/tenders');
+                    }}
+                    className="w-full text-left text-xs font-semibold py-2 px-2 hover:text-black text-slate-600 hover:bg-slate-50 rounded-lg cursor-pointer transition"
+                  >
+                    🏛️ Public Tenders
                   </button>
 
                   {user.role === 'admin' && (

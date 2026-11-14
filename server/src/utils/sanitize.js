@@ -35,18 +35,18 @@ export function sanitizeIssueReport(ai = {}) {
   const priority = Math.round(Number(ai.priority));
   const rawSteps = Array.isArray(ai.steps)
     ? ai.steps.map((s) => str(s, 240)).filter(Boolean).join('\n')
-    : str(ai.steps, 1000);
+    : str(ai.steps, 2500);
 
   return {
     isValid: true,
     category,
     severity: level(ai.severity),
     risk: level(ai.risk),
-    description: str(ai.description, 500),
-    department: str(ai.department, 80) || DEPARTMENTS[category],
+    description: str(ai.description, 500) || `${category} infrastructure hazard detected on-site.`,
+    department: str(ai.department, 180) || DEPARTMENTS[category],
     priority: Number.isFinite(priority) ? Math.min(10, Math.max(1, priority)) : 5,
-    fixTime: str(ai.fix_time ?? ai.fixTime, 40) || '24–48 hours',
-    steps: rawSteps || DEFAULT_STEPS[category] || DEFAULT_STEPS.other,
+    fixTime: str(ai.fix_time ?? ai.fixTime, 80) || '24–48 hours',
+    steps: str(rawSteps || DEFAULT_STEPS[category] || DEFAULT_STEPS.other, 2800),
   };
 }
 
