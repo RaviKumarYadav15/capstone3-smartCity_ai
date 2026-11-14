@@ -13,6 +13,8 @@ export const env = {
   mongoUri: need('MONGODB_URI', 'mongodb://127.0.0.1:27017/smartcity'),
   jwtSecret: need('JWT_SECRET', 'dev-only-secret-change-me-dev-only-secret'),
   clientOrigin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
+  openRouterKey: process.env.OPENROUTER_API_KEY || '',
+  openRouterModel: process.env.OPENROUTER_MODEL || 'nvidia/nemotron-3.5-super-vl:free',
   geminiKey: process.env.GEMINI_API_KEY || '',
   geminiModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
   cloudinaryUrl: process.env.CLOUDINARY_URL || '',
