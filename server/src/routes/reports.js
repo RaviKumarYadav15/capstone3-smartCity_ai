@@ -63,22 +63,30 @@ router.post('/describe', requireAuth, perUser(20), imageUpload, asyncHandler(asy
   if (!type) throw new HttpError(400, 'Only JPEG, PNG or WebP images are supported');
   if (!aiEnabled()) throw new HttpError(503, 'AI features are not configured');
 
-  const analysis = await analyzeIssueImage({ buffer: req.file.buffer, mime: type.mime });
-  if (analysis.isValid === false) {
+  try {
+    const analysis = await analyzeIssueImage({ buffer: req.file.buffer, mime: type.mime });
+    if (analysis.isValid === false) {
+      return res.json({
+        isValid: false,
+        rejectionReason: analysis.rejectionReason || 'The uploaded photo does not appear to show a valid civic infrastructure issue.',
+      });
+    }
+
+    return res.json({
+      isValid: true,
+      category: analysis.category || 'other',
+      description: analysis.description || '',
+      severity: analysis.severity || 'medium',
+      department: analysis.department || '',
+      priority: analysis.priority || 5,
+    });
+  } catch (err) {
+    console.error('Image analysis error in /describe:', err);
     return res.json({
       isValid: false,
-      rejectionReason: analysis.rejectionReason || 'The uploaded photo does not appear to show a valid civic infrastructure issue.',
+      rejectionReason: err.message || 'The photo could not be verified by the AI inspector. Please try another photo.',
     });
   }
-
-  res.json({
-    isValid: true,
-    category: analysis.category || 'other',
-    description: analysis.description || '',
-    severity: analysis.severity || 'medium',
-    department: analysis.department || '',
-    priority: analysis.priority || 5,
-  });
 }));
 
 router.post('/', requireAuth, perUser(10), imageUpload, asyncHandler(async (req, res) => {
@@ -125,6 +133,10 @@ router.post('/', requireAuth, perUser(10), imageUpload, asyncHandler(async (req,
   if (!fields.description || !fields.description.trim()) {
     fields.description = `${fields.category || 'Civic infrastructure'} issue reported by citizen.`;
   }
+  if (!CATEGORIES.includes(fields.category)) fields.category = 'other';
+  if (!LEVELS.includes(fields.severity)) fields.severity = 'medium';
+  if (!LEVELS.includes(fields.risk)) fields.risk = 'medium';
+  if (!fields.priority || isNaN(fields.priority)) fields.priority = 5;
 
   const addressData = body.address || {
     area: body.area || '',

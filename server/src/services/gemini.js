@@ -28,9 +28,25 @@ async function generate({ prompt, image, json = false }) {
   } finally {
     clearTimeout(timer);
   }
-  if (!res.ok) throw new HttpError(502, `AI service error (${res.status})`);
-  const text = (await res.json()).candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new HttpError(502, 'Empty AI response');
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => null);
+    const detail = errorBody?.error?.message || `HTTP ${res.status}`;
+    console.error(`Gemini API error (${res.status}):`, detail);
+    if (res.status === 429) {
+      throw new HttpError(429, 'AI service is temporarily busy (rate limit). Please wait a moment and try again.');
+    }
+    throw new HttpError(502, `AI service error: ${detail}`);
+  }
+  const data = await res.json().catch(() => null);
+  const candidate = data?.candidates?.[0];
+  if (candidate?.finishReason === 'SAFETY') {
+    return {
+      isValid: false,
+      rejectionReason: 'The image was flagged by safety filters and cannot be verified as a valid civic issue.',
+    };
+  }
+  const text = candidate?.content?.parts?.[0]?.text;
+  if (!text) throw new HttpError(502, 'AI could not read content from this image. Please upload a clearer photo.');
   if (!json) return text.trim();
   try { return JSON.parse(text); } catch { throw new HttpError(502, 'AI returned invalid JSON'); }
 }

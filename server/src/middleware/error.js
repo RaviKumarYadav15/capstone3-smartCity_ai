@@ -1,6 +1,7 @@
 import { ZodError } from 'zod';
 import multer from 'multer';
 import { env } from '../config/env.js';
+import { HttpError } from '../utils/HttpError.js';
 
 export const notFound = (_req, res) => res.status(404).json({ error: 'Not found' });
 
@@ -20,5 +21,8 @@ export function errorHandler(err, _req, res, _next) {
   if (err.code === 11000) return res.status(409).json({ error: 'That value already exists' });
   const status = err.status || 500;
   if (status >= 500) console.error(err);
-  res.status(status).json({ error: status >= 500 && env.isProd ? 'Server error' : err.message });
+  const errorMessage = (err instanceof HttpError)
+    ? err.message
+    : (status >= 500 && env.isProd ? 'Server error' : err.message);
+  res.status(status).json({ error: errorMessage || 'An unexpected error occurred' });
 }

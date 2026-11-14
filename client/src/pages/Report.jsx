@@ -34,7 +34,6 @@ export default function Report() {
   const [analysisReport, setAnalysisReport] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [showCameraModal, setShowCameraModal] = useState(false);
-  const [validationError, setValidationError] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [aiDraftGenerated, setAiDraftGenerated] = useState(false);
   const [imageVerification, setImageVerification] = useState(null);
@@ -48,6 +47,8 @@ export default function Report() {
     formatted: '',
   });
   const [isResolvingAddress, setIsResolvingAddress] = useState(false);
+
+  const isPhotoVerified = imageVerification?.isValid === true;
 
   const recognitionRef = useRef(null);
   const descTextareaRef = useRef(null);
@@ -117,21 +118,19 @@ export default function Report() {
   const pickFile = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setValidationError('');
     setImageVerification(null);
     try {
       const b = await resizeImage(file);
       setBlob(b);
       setPreview(URL.createObjectURL(b));
     } catch {
-      toast('That file is not a readable image');
+      toast.error('That file is not a readable image');
     }
   };
 
   const removePhoto = () => {
     setBlob(null);
     setPreview(null);
-    setValidationError('');
     setImageVerification(null);
   };
 
@@ -141,7 +140,6 @@ export default function Report() {
       setBlob(b);
       setPreview(URL.createObjectURL(b));
       setShowCameraModal(false);
-      setValidationError('');
       setImageVerification(null);
       toast.success('Live photo captured from camera');
     } catch {
@@ -159,7 +157,6 @@ export default function Report() {
       return;
     }
     setVerifyingPhoto(true);
-    setValidationError('');
     try {
       const fd = new FormData();
       fd.append('image', blob, 'issue.jpg');
@@ -167,8 +164,7 @@ export default function Report() {
       if (res.isValid === false) {
         const reason = res.rejectionReason || 'The photo does not appear to show a valid civic infrastructure issue.';
         setImageVerification({ isValid: false, rejectionReason: reason });
-        setValidationError(reason);
-        toast.error('Photo rejected by AI inspector');
+        toast.error(reason);
       } else {
         setImageVerification({
           isValid: true,
@@ -184,12 +180,10 @@ export default function Report() {
           setDescription(res.description);
           setAiDraftGenerated(true);
         }
-        setValidationError('');
         toast.success(`Photo verified! Detected ${res.category} (${res.severity} severity)`);
       }
     } catch (err) {
       const msg = err.message || 'Failed to verify photo with AI';
-      setValidationError(msg);
       setImageVerification({ isValid: false, rejectionReason: msg });
       toast.error(msg);
     } finally {
@@ -288,7 +282,6 @@ export default function Report() {
       return;
     }
     setGeneratingDesc(true);
-    setValidationError('');
     try {
       const fd = new FormData();
       fd.append('image', blob, 'issue.jpg');
@@ -304,7 +297,6 @@ export default function Report() {
       toast.success(`AI generated description & detected category (${res.category})`);
     } catch (err) {
       const msg = err.message || 'Failed to analyze photo with AI';
-      setValidationError(msg);
       toast.error(msg);
     } finally {
       setGeneratingDesc(false);
@@ -317,16 +309,19 @@ export default function Report() {
       openAuthModal();
       return;
     }
-    if (!blob && !category) {
+    if (!isPhotoVerified) {
+      toast.error('Please verify your photo with AI before submitting the report');
+      return;
+    }
+    if (!category) {
       toast.error('Please select an issue category');
       return;
     }
-    if (!blob && !description.trim()) {
-      toast.error('Please describe the issue or attach a photo');
+    if (!description.trim()) {
+      toast.error('Please describe the issue');
       return;
     }
     setBusy(true);
-    setValidationError('');
     try {
       const form = new FormData();
       if (blob) form.append('image', blob, 'photo.jpg');
@@ -352,7 +347,7 @@ export default function Report() {
       setPreview(null);
       setDescription('');
       setCategory('');
-      setValidationError('');
+      setImageVerification(null);
       setAiDraftGenerated(false);
       if (isListening && recognitionRef.current) {
         try {
@@ -366,7 +361,6 @@ export default function Report() {
       setShowModal(true);
       toast.success('Civic report filed & verified');
     } catch (err) {
-      setValidationError(err.message);
       toast.error(err.message);
     } finally {
       setBusy(false);
@@ -415,48 +409,47 @@ export default function Report() {
 
         {/* Right Side: Form */}
         <div className="md:col-span-7 p-6 sm:p-10 bg-white flex flex-col justify-center">
-          {validationError && (
-            <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 text-sm flex items-start gap-3">
-              <span className="text-lg">⚠️</span>
-              <div>
-                <strong className="font-bold">Image Validation Notice:</strong>
-                <p className="mt-0.5">{validationError}</p>
-              </div>
-            </div>
-          )}
-
           <form onSubmit={submit} className="form flex flex-col gap-6">
             {/* Step 1: Photo Evidence */}
             <div>
-              <label className="text-sm font-bold text-slate-800 flex justify-between items-center mb-2">
-                <span>Step 1: Photo Evidence {!aiEnabled && '(Optional)'}</span>
-                {preview && (
-                  <button type="button" onClick={removePhoto} className="text-xs text-red-600 hover:underline font-semibold cursor-pointer">
-                    Remove photo
-                  </button>
-                )}
+              <label className="text-sm font-bold text-slate-800 block mb-2">
+                Step 1: Photo Evidence {!aiEnabled && '(Optional)'}
               </label>
 
               {preview ? (
                 <div className="flex flex-col gap-2.5">
                   <div className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-50">
                     <img className="w-full max-h-64 object-cover" src={preview} alt="Selected civic issue preview" />
-                    <div className="p-3 bg-white/95 backdrop-blur-xs border-t border-slate-200 text-xs text-slate-600 flex justify-between items-center flex-wrap gap-2">
+                    <div className="p-3 bg-white border-t border-slate-200 text-xs text-slate-600 flex justify-between items-center flex-wrap gap-2.5">
                       <span className="text-slate-700 font-semibold flex items-center gap-1.5">
                         <FaCamera className="text-blue-600" /> Photo Attached
                       </span>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {/* 1. Retake Button */}
                         <button
                           type="button"
                           onClick={() => setShowCameraModal(true)}
-                          className="text-blue-600 font-bold hover:underline cursor-pointer flex items-center gap-1"
+                          className="text-xs font-semibold px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl transition cursor-pointer flex items-center gap-1.5 border border-slate-200 shadow-2xs"
                         >
-                          <FaCamera className="text-xs" /> Retake
+                          <FaCamera className="text-blue-600 text-xs" />
+                          <span>Retake</span>
                         </button>
-                        <label className="text-slate-600 font-bold hover:underline cursor-pointer">
-                          Upload different
+
+                        {/* 2. Upload Different Button (Highlighted) */}
+                        <label className="text-xs font-bold px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-xs">
+                          <FaFileUpload className="text-xs" />
+                          <span>Upload Different</span>
                           <input type="file" accept="image/jpeg,image/png,image/webp" onChange={pickFile} className="hidden" />
                         </label>
+
+                        {/* 3. Remove Photo Button */}
+                        <button
+                          type="button"
+                          onClick={removePhoto}
+                          className="text-xs font-semibold px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                        >
+                          <span>✕ Remove</span>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -495,16 +488,9 @@ export default function Report() {
                       <div className="flex items-center gap-2 pt-1 border-t border-red-200/60">
                         <button
                           type="button"
-                          onClick={() => setShowCameraModal(true)}
-                          className="text-xs font-bold px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg cursor-pointer transition shadow-2xs"
-                        >
-                          📸 Retake Photo
-                        </button>
-                        <button
-                          type="button"
                           onClick={handleVerifyPhoto}
                           disabled={verifyingPhoto}
-                          className="text-xs font-semibold px-3 py-1.5 bg-white border border-red-300 hover:bg-red-50 text-red-800 rounded-lg cursor-pointer transition"
+                          className="text-xs font-semibold px-3 py-1.5 bg-white border border-red-300 hover:bg-red-50 text-red-800 rounded-lg cursor-pointer transition shadow-2xs flex items-center gap-1"
                         >
                           🔄 Retry Verification
                         </button>
@@ -587,6 +573,31 @@ export default function Report() {
               )}
             </div>
 
+            {/* Lockout Notice when Image Not Yet Verified */}
+            {!isPhotoVerified && (
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-600 flex items-center gap-3 shadow-2xs">
+                <span className="text-xl">🔒</span>
+                <div>
+                  <span className="font-bold text-slate-800 block text-xs">
+                    Verification Required to Proceed
+                  </span>
+                  <p className="text-slate-500 m-0 mt-0.5">
+                    {!blob
+                      ? 'Take or upload a photo of the civic issue above, then verify it with AI to unlock the incident location, category, and description fields.'
+                      : 'Please click "Verify Photo with AI" above to validate the image before continuing.'}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Steps 2-4 and Submit: Disabled & Grayed Until Photo is Verified */}
+            <fieldset
+              disabled={!isPhotoVerified}
+              className={`flex flex-col gap-6 border-0 p-0 m-0 transition-all duration-300 ${
+                !isPhotoVerified ? 'opacity-40 grayscale pointer-events-none select-none' : ''
+              }`}
+            >
+
             {/* Step 2: Location Picker */}
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -610,16 +621,6 @@ export default function Report() {
                       {pos[0].toFixed(5)}, {pos[1].toFixed(5)}
                     </span>
                   </div>
-                  {isResolvingAddress ? (
-                    <span className="flex items-center gap-1.5 text-blue-600 font-semibold text-[11px] animate-pulse">
-                      <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping"></span>
-                      Resolving address from coordinates...
-                    </span>
-                  ) : (
-                    <span className="text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md text-[10px] uppercase tracking-wider">
-                      ✓ Address Resolved
-                    </span>
-                  )}
                 </div>
 
                 {/* Structured Address Badges: Area, City, State, Country */}
@@ -827,7 +828,7 @@ export default function Report() {
             <button
               type="submit"
               className="w-full bg-gradient-to-b from-blue-900 to-blue-600 hover:from-blue-950 hover:to-blue-700 text-white font-bold py-3.5 px-6 rounded-full shadow-md transition-all duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-base flex items-center justify-center gap-2"
-              disabled={busy || generatingDesc || (!blob && (!category || !description.trim()))}
+              disabled={busy || generatingDesc || !isPhotoVerified}
             >
               {busy ? (
                 <>
@@ -838,7 +839,8 @@ export default function Report() {
                 <span>Submit Civic Report</span>
               )}
             </button>
-          </form>
+          </fieldset>
+        </form>
         </div>
       </section>
 
