@@ -131,15 +131,33 @@ export default function MapPage() {
     }
   };
 
-  // Large 3D Locate Me click handler
-  const handleLocateUser = () => {
+  // 3D Locate Me click handler
+  const handleLocateToggle = () => {
+    if (isNearby5km) {
+      // Toggle off back to start state
+      setIsNearby5km(false);
+      toast.success('Reset to full city view');
+      return;
+    }
+
+    if (userLocation) {
+      // Already have coordinates, fly to user and activate 5km mode
+      setCityCenter(userLocation);
+      setCityZoom(14);
+      setTargetLocation(null);
+      setTargetId(null);
+      setIsNearby5km(true);
+      toast.success('Centered on your live location — showing 5 km nearby hazards');
+      return;
+    }
+
     if (!navigator.geolocation) {
       toast.error('Geolocation is not supported by your browser');
       return;
     }
     setLocatingUser(true);
     navigator.geolocation.getCurrentPosition(
-      async (p) => {
+      (p) => {
         setLocatingUser(false);
         const coords = [p.coords.latitude, p.coords.longitude];
         setUserLocation(coords);
@@ -149,18 +167,6 @@ export default function MapPage() {
         setTargetId(null);
         setIsNearby5km(true);
         toast.success('Centered on your live location — showing 5 km nearby hazards');
-
-        // Check if user's location matches any existing detected city
-        try {
-          const geo = await reverseGeocode(coords[0], coords[1]);
-          if (geo?.city) {
-            const match = detectedCities.find((c) => c.name.toLowerCase() === geo.city.toLowerCase());
-            if (match) {
-              setSelectedCity(match.name);
-              localStorage.setItem('smartcity_preferred_city', match.name);
-            }
-          }
-        } catch {}
       },
       () => {
         setLocatingUser(false);
@@ -282,49 +288,42 @@ export default function MapPage() {
               fitBoundsCoords={fitBoundsCoords}
             />
 
-            {/* Floating 3D Locate Me Button & Nearby 5 km Option */}
-            <div className="absolute bottom-5 right-5 z-[500] flex items-center gap-2.5">
-              {/* Nearby 5 km Option Pill (Visible when user location is known or after clicking locate) */}
-              {userLocation && (
-                <div className="bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-full border border-slate-200/90 shadow-[0_4px_14px_rgba(0,0,0,0.14)] flex items-center gap-1.5 text-xs">
-                  <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
-                    <span>🎯</span>
-                    <span className="hidden sm:inline">Nearby:</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setIsNearby5km(!isNearby5km)}
-                    className={`text-xs font-bold px-3 py-1 rounded-full transition-all cursor-pointer border ${
-                      isNearby5km
-                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
-                    }`}
-                  >
-                    {isNearby5km ? `✓ 5 km Active (${nearby5kmCount})` : `5 km (${nearby5kmCount})`}
-                  </button>
-                </div>
-              )}
-
-              {/* Large 3D Circular Locate Me Button */}
+            {/* Floating 3D Locate Me Button */}
+            <div className="absolute bottom-5 right-5 z-[500]">
               <button
                 type="button"
-                onClick={handleLocateUser}
+                onClick={handleLocateToggle}
                 disabled={locatingUser}
-                title="Locate my position (3D GPS Auto-Center)"
-                aria-label="Locate my position"
-                className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full transition-all cursor-pointer flex flex-col items-center justify-center group disabled:opacity-60 select-none ${
+                title={isNearby5km ? 'Click to reset back to full view' : 'Locate my position & view 5 km nearby hazards'}
+                aria-label={isNearby5km ? 'Locate 5km Active' : 'Locate Me'}
+                className={`transition-all cursor-pointer flex items-center gap-2 select-none px-4 py-2.5 sm:px-5 sm:py-3 rounded-full ${
                   isNearby5km
                     ? 'bg-gradient-to-b from-blue-500 to-blue-600 text-white border-2 border-blue-400 shadow-[0_6px_0_#1d4ed8,0_12px_22px_rgba(37,99,235,0.35)] active:translate-y-1 active:shadow-[0_2px_0_#1d4ed8,0_4px_10px_rgba(37,99,235,0.3)]'
-                    : 'bg-gradient-to-b from-white via-slate-50 to-slate-100 text-blue-600 border-2 border-slate-300 shadow-[0_6px_0_#94a3b8,0_12px_22px_rgba(0,0,0,0.2)] active:translate-y-1 active:shadow-[0_2px_0_#94a3b8,0_4px_10px_rgba(0,0,0,0.15)] hover:from-white hover:to-blue-50'
+                    : 'bg-gradient-to-b from-white via-slate-50 to-slate-100 text-slate-800 border-2 border-slate-300 shadow-[0_6px_0_#94a3b8,0_12px_22px_rgba(0,0,0,0.2)] active:translate-y-1 active:shadow-[0_2px_0_#94a3b8,0_4px_10px_rgba(0,0,0,0.15)] hover:from-white hover:to-blue-50'
                 }`}
               >
                 {locatingUser ? (
-                  <span className="w-6 h-6 border-3 border-blue-600/30 border-t-blue-600 rounded-full animate-spin"></span>
+                  <>
+                    <span className="w-4 h-4 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin"></span>
+                    <span className="font-extrabold text-xs sm:text-sm">Locating...</span>
+                  </>
+                ) : isNearby5km ? (
+                  <>
+                    <BiCurrentLocation className="text-xl sm:text-2xl text-white animate-pulse" />
+                    <span className="font-extrabold text-xs sm:text-sm tracking-tight">
+                      Locate 5km Active
+                    </span>
+                    {nearby5kmCount > 0 && (
+                      <span className="bg-white/25 text-white text-[11px] font-black px-2 py-0.5 rounded-full ml-0.5">
+                        {nearby5kmCount}
+                      </span>
+                    )}
+                  </>
                 ) : (
                   <>
-                    <BiCurrentLocation className={`text-2xl sm:text-3xl transition-transform group-hover:scale-110 ${isNearby5km ? 'text-white' : 'text-blue-600'}`} />
-                    <span className={`text-[9px] font-black uppercase tracking-tight -mt-0.5 ${isNearby5km ? 'text-blue-100' : 'text-slate-600'}`}>
-                      Locate
+                    <BiCurrentLocation className="text-xl sm:text-2xl text-blue-600 group-hover:scale-110 transition-transform" />
+                    <span className="font-extrabold text-xs sm:text-sm text-slate-800 tracking-tight">
+                      Locate Me
                     </span>
                   </>
                 )}
