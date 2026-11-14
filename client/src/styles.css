@@ -293,6 +293,11 @@ label.inline { display: flex; align-items: center; gap: 8px; flex-direction: row
 label.inline select { width: auto; }
 
 /* Maps & Previews */
+.map, .mini-map, .leaflet-container {
+  z-index: 0;
+  isolation: isolate;
+}
+
 .map {
   height: 440px;
   border-radius: var(--radius);
@@ -304,7 +309,6 @@ label.inline select { width: auto; }
 .mini-map {
   height: 240px;
   border-radius: var(--radius);
-  z-index: 0;
   border: 1px solid var(--border);
 }
 

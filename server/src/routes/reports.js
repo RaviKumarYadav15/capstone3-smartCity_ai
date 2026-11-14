@@ -12,11 +12,32 @@ import { detectImageType } from '../utils/image.js';
 
 const router = Router();
 
+const addressSchema = z.object({
+  area: z.string().max(200).optional().default(''),
+  city: z.string().max(200).optional().default(''),
+  state: z.string().max(200).optional().default(''),
+  country: z.string().max(200).optional().default(''),
+  pincode: z.string().max(50).optional().default(''),
+  formatted: z.string().max(500).optional().default(''),
+}).optional();
+
 const createSchema = z.object({
   lat: z.coerce.number().min(-90).max(90),
   lng: z.coerce.number().min(-180).max(180),
   category: z.string().optional(),
   description: z.string().trim().max(1000).optional().default(''),
+  address: z.preprocess((val) => {
+    if (typeof val === 'string') {
+      try { return JSON.parse(val); } catch { return undefined; }
+    }
+    return val;
+  }, addressSchema),
+  area: z.string().max(200).optional(),
+  city: z.string().max(200).optional(),
+  state: z.string().max(200).optional(),
+  country: z.string().max(200).optional(),
+  pincode: z.string().max(50).optional(),
+  formattedAddress: z.string().max(500).optional(),
 });
 
 router.get('/', asyncHandler(async (req, res) => {
@@ -44,7 +65,7 @@ router.post('/describe', requireAuth, perUser(20), imageUpload, asyncHandler(asy
 
   const analysis = await analyzeIssueImage({ buffer: req.file.buffer, mime: type.mime });
   if (analysis.isValid === false) {
-    return res.status(400).json({
+    return res.json({
       isValid: false,
       rejectionReason: analysis.rejectionReason || 'The uploaded photo does not appear to show a valid civic infrastructure issue.',
     });
@@ -105,9 +126,19 @@ router.post('/', requireAuth, perUser(10), imageUpload, asyncHandler(async (req,
     fields.description = `${fields.category || 'Civic infrastructure'} issue reported by citizen.`;
   }
 
+  const addressData = body.address || {
+    area: body.area || '',
+    city: body.city || '',
+    state: body.state || '',
+    country: body.country || '',
+    pincode: body.pincode || '',
+    formatted: body.formattedAddress || '',
+  };
+
   const report = await Report.create({
     ...fields,
     location: { type: 'Point', coordinates: [body.lng, body.lat] },
+    address: addressData,
     image: saved?.name,
     user: req.user._id,
     userName: req.user.name,
@@ -122,13 +153,30 @@ router.post('/:id/letter', requireAuth, perUser(30), asyncHandler(async (req, re
     throw new HttpError(403, 'Only the original author who filed this report can write or access the complaint letter');
   }
   if (!report.complaintLetter) {
-    const shape = { ...report.toObject(), lat: report.location.coordinates[1], lng: report.location.coordinates[0] };
+    const shape = {
+      ...report.toObject(),
+      lat: report.location.coordinates[1],
+      lng: report.location.coordinates[0],
+      address: report.address || null,
+    };
     let letter;
     try { letter = aiEnabled() ? await writeComplaintLetter(shape) : complaintTemplate(shape); }
     catch { letter = complaintTemplate(shape); }
     report.complaintLetter = letter;
     await report.save();
   }
+  res.json({ letter: report.complaintLetter });
+}));
+
+router.put('/:id/letter', requireAuth, asyncHandler(async (req, res) => {
+  const { letter } = z.object({ letter: z.string().max(10000) }).parse(req.body);
+  const report = await Report.findById(req.params.id);
+  if (!report) throw new HttpError(404, 'Report not found');
+  if (String(report.user) !== String(req.user._id)) {
+    throw new HttpError(403, 'Only the original author who filed this report can edit the complaint letter');
+  }
+  report.complaintLetter = letter;
+  await report.save();
   res.json({ letter: report.complaintLetter });
 }));
 

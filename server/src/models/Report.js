@@ -16,6 +16,14 @@ const reportSchema = new mongoose.Schema({
     type: { type: String, enum: ['Point'], default: 'Point' },
     coordinates: { type: [Number], required: true }, // [lng, lat]
   },
+  address: {
+    area: { type: String, maxlength: 200, default: '' },
+    city: { type: String, maxlength: 200, default: '' },
+    state: { type: String, maxlength: 200, default: '' },
+    country: { type: String, maxlength: 200, default: '' },
+    pincode: { type: String, maxlength: 50, default: '' },
+    formatted: { type: String, maxlength: 500, default: '' },
+  },
   image: String, // file name inside UPLOAD_DIR
   status: { type: String, enum: STATUSES, default: 'reported', index: true },
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -50,6 +58,14 @@ export function serializeReport(doc, userId, userRole = null) {
     status: r.status,
     lat: r.location.coordinates[1],
     lng: r.location.coordinates[0],
+    address: r.address ? {
+      area: r.address.area || '',
+      city: r.address.city || '',
+      state: r.address.state || '',
+      country: r.address.country || '',
+      pincode: r.address.pincode || '',
+      formatted: r.address.formatted || '',
+    } : null,
     imageUrl: r.image ? (r.image.startsWith('http') ? r.image : `/uploads/${r.image}`) : null,
     userName: r.userName || 'Resident',
     createdAt: r.createdAt,

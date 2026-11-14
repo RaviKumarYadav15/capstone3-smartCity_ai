@@ -7,6 +7,7 @@ import LocationPicker from '../components/LocationPicker.jsx';
 import ReportAnalysisModal from '../components/ReportAnalysisModal.jsx';
 import CameraModal from '../components/CameraModal.jsx';
 import { resizeImage } from '../utils/resizeImage.js';
+import { reverseGeocode } from '../utils/geocode.js';
 import { CATEGORIES, DEFAULT_CENTER } from '../utils/format.js';
 import {
   FaFileUpload,
@@ -38,6 +39,15 @@ export default function Report() {
   const [aiDraftGenerated, setAiDraftGenerated] = useState(false);
   const [imageVerification, setImageVerification] = useState(null);
   const [verifyingPhoto, setVerifyingPhoto] = useState(false);
+  const [address, setAddress] = useState({
+    area: '',
+    city: '',
+    state: '',
+    country: '',
+    pincode: '',
+    formatted: '',
+  });
+  const [isResolvingAddress, setIsResolvingAddress] = useState(false);
 
   const recognitionRef = useRef(null);
   const descTextareaRef = useRef(null);
@@ -81,6 +91,28 @@ export default function Report() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    setIsResolvingAddress(true);
+    const timeout = setTimeout(async () => {
+      try {
+        const geo = await reverseGeocode(pos[0], pos[1]);
+        if (active && geo) {
+          setAddress(geo);
+        }
+      } catch (err) {
+        console.warn('Geocoding lookup error:', err);
+      } finally {
+        if (active) setIsResolvingAddress(false);
+      }
+    }, 350);
+
+    return () => {
+      active = false;
+      clearTimeout(timeout);
+    };
+  }, [pos[0], pos[1]]);
 
   const pickFile = async (e) => {
     const file = e.target.files?.[0];
@@ -300,6 +332,15 @@ export default function Report() {
       if (blob) form.append('image', blob, 'photo.jpg');
       form.append('lat', pos[0]);
       form.append('lng', pos[1]);
+      if (address) {
+        form.append('address', JSON.stringify(address));
+        if (address.area) form.append('area', address.area);
+        if (address.city) form.append('city', address.city);
+        if (address.state) form.append('state', address.state);
+        if (address.country) form.append('country', address.country);
+        if (address.pincode) form.append('pincode', address.pincode);
+        if (address.formatted) form.append('formattedAddress', address.formatted);
+      }
       if (category) form.append('category', category);
       if (description.trim()) {
         form.append('description', description.trim());
@@ -559,9 +600,63 @@ export default function Report() {
                 </button>
               </div>
               <LocationPicker position={pos} onPick={setPos} />
-              <p className="text-xs text-slate-500 mt-1.5">
-                Coordinates: <strong>{pos[0].toFixed(5)}, {pos[1].toFixed(5)}</strong> · Click anywhere on the map to drag the pin
-              </p>
+
+              {/* Coordinates and Resolved Address Box */}
+              <div className="mt-2.5 p-3.5 bg-slate-50 border border-slate-200/90 rounded-2xl flex flex-col gap-2.5 text-xs text-slate-700 shadow-2xs">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-1.5 text-slate-600 font-mono text-[11px]">
+                    <span className="font-semibold text-slate-800">GPS Coordinates:</span>
+                    <span className="bg-white px-2 py-0.5 rounded-md border border-slate-200 font-bold text-slate-900">
+                      {pos[0].toFixed(5)}, {pos[1].toFixed(5)}
+                    </span>
+                  </div>
+                  {isResolvingAddress ? (
+                    <span className="flex items-center gap-1.5 text-blue-600 font-semibold text-[11px] animate-pulse">
+                      <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping"></span>
+                      Resolving address from coordinates...
+                    </span>
+                  ) : (
+                    <span className="text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md text-[10px] uppercase tracking-wider">
+                      ✓ Address Resolved
+                    </span>
+                  )}
+                </div>
+
+                {/* Structured Address Badges: Area, City, State, Country */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-slate-200/70">
+                  <div className="bg-white p-2 rounded-xl border border-slate-200/80">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Area / Locality</span>
+                    <span className="font-semibold text-slate-800 text-xs truncate block" title={address?.area || 'Resolving...'}>
+                      {address?.area || '—'}
+                    </span>
+                  </div>
+                  <div className="bg-white p-2 rounded-xl border border-slate-200/80">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">City / Town</span>
+                    <span className="font-semibold text-slate-800 text-xs truncate block" title={address?.city || 'Resolving...'}>
+                      {address?.city || '—'}
+                    </span>
+                  </div>
+                  <div className="bg-white p-2 rounded-xl border border-slate-200/80">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">State</span>
+                    <span className="font-semibold text-slate-800 text-xs truncate block" title={address?.state || 'Resolving...'}>
+                      {address?.state || '—'}
+                    </span>
+                  </div>
+                  <div className="bg-white p-2 rounded-xl border border-slate-200/80">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Country (PIN)</span>
+                    <span className="font-semibold text-slate-800 text-xs truncate block" title={`${address?.country || ''} ${address?.pincode ? `(${address.pincode})` : ''}`}>
+                      {address?.country ? `${address.country} ${address?.pincode ? `(${address.pincode})` : ''}` : '—'}
+                    </span>
+                  </div>
+                </div>
+
+                {address?.formatted && (
+                  <div className="text-[11px] text-slate-600 bg-white/80 px-2.5 py-1.5 rounded-lg border border-slate-200/60 leading-relaxed">
+                    <strong className="text-slate-800 font-semibold">Full Address: </strong>
+                    <span>{address.formatted}</span>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Step 3: Category & Description */}
@@ -641,25 +736,41 @@ export default function Report() {
                 </div>
               </div>
 
-              {/* AI Draft helper banner with manual editing hint */}
+              {/* AI Draft helper banner with manual editing action */}
               {aiDraftGenerated && description && (
-                <div className="mb-2 p-2.5 px-3 bg-blue-50 border border-blue-200/90 rounded-xl text-xs text-blue-900 flex items-center justify-between gap-2">
+                <div className="mb-2 p-2.5 px-3.5 bg-blue-50 border border-blue-200/90 rounded-xl text-xs text-blue-900 flex items-center justify-between gap-2 flex-wrap">
                   <div className="flex items-center gap-2">
                     <FaEdit className="text-blue-600 shrink-0 text-sm" />
                     <span>
-                      <strong>AI Draft Ready:</strong> Feel free to edit, add landmark details, or speak to append more info.
+                      <strong>AI Draft Loaded:</strong> The text below is editable — click to add street landmarks or speak.
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDescription('');
-                      setAiDraftGenerated(false);
-                    }}
-                    className="text-blue-700 hover:text-red-600 underline font-semibold shrink-0 cursor-pointer"
-                  >
-                    Clear Text
-                  </button>
+                  <div className="flex items-center gap-2 ml-auto">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        descTextareaRef.current?.focus();
+                        const len = descTextareaRef.current?.value.length || 0;
+                        descTextareaRef.current?.setSelectionRange(len, len);
+                      }}
+                      className="text-blue-700 font-bold bg-white border border-blue-300 hover:bg-blue-100 px-2.5 py-1 rounded-lg text-xs cursor-pointer shadow-2xs"
+                    >
+                      ✏️ Edit Text
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm('Reset and clear description text?')) {
+                          setDescription('');
+                          setAiDraftGenerated(false);
+                        }
+                      }}
+                      className="text-slate-400 hover:text-red-600 text-[11px] underline cursor-pointer"
+                      title="Clear and reset text"
+                    >
+                      Reset
+                    </button>
+                  </div>
                 </div>
               )}
 

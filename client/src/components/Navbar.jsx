@@ -30,7 +30,7 @@ export default function Navbar() {
   };
 
   return (
-    <div className="bg-[#f3f3f3] flex justify-center px-4 pt-6 transition-all">
+    <div className="bg-[#f3f3f3] flex justify-center px-4 pt-6 transition-all relative z-50">
       <div className="w-full max-w-6xl bg-gradient-to-r from-blue-50 via-blue-100 to-blue-50 rounded-3xl shadow-sm border border-slate-200/90 px-6 sm:px-8 py-3.5 flex justify-between items-center relative transition-all duration-300">
         
         {/* Brand */}

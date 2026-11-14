@@ -1,12 +1,17 @@
 // Plain templates used when AI is unavailable. Factual wording; no accusations.
 const today = () => new Date().toLocaleDateString('en-GB');
 
-export const complaintTemplate = (r) => `To The Officer In Charge,
+export const complaintTemplate = (r) => {
+  const loc = r.address?.formatted
+    ? `${r.address.formatted} (Coordinates: ${r.lat.toFixed(5)}, ${r.lng.toFixed(5)})`
+    : `coordinates ${r.lat.toFixed(5)}, ${r.lng.toFixed(5)}`;
+
+  return `To The Officer In Charge,
 ${r.department}
 
 Subject: Request for action - ${r.category} (priority ${r.priority}/10)
 
-I am writing to report a ${r.severity}-severity ${r.category.toLowerCase()} issue at coordinates ${r.lat.toFixed(5)}, ${r.lng.toFixed(5)}.
+I am writing to report a ${r.severity}-severity ${r.category.toLowerCase()} issue at ${loc}.
 
 Description: ${r.description}
 
@@ -16,6 +21,7 @@ Date: ${today()}
 
 Yours faithfully,
 Smart City Platform`;
+};
 
 export const disputeTemplate = ({ tender, category, description, userName }) => `To,
 The Superintending Engineer / Chief Vigilance Officer

@@ -19,7 +19,7 @@ async function request(path, { method = 'GET', body, form } = {}) {
   let res;
   try { res = await fetch(`${API_BASE}/api${path}`, opts); } catch { throw new ApiError('Cannot reach the server', 0); }
   const data = res.status === 204 ? null : await res.json().catch(() => null);
-  if (!res.ok) throw new ApiError(data?.error || `Request failed (${res.status})`, res.status);
+  if (!res.ok) throw new ApiError(data?.rejectionReason || data?.error || `Request failed (${res.status})`, res.status);
   return data;
 }
 

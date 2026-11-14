@@ -57,7 +57,15 @@ Return JSON strictly in this structure:
 
 export const writeComplaintLetter = (r) => generate({
   prompt: `Write a formal 3-paragraph complaint letter to ${clip(r.department, 80)}. ${DATA_RULE}
-${data({ category: r.category, description: r.description, severity: r.severity, priority: r.priority, lat: r.lat, lng: r.lng })}
+${data({
+  category: r.category,
+  description: r.description,
+  severity: r.severity,
+  priority: r.priority,
+  location_address: r.address?.formatted || (r.address?.area ? `${r.address.area}, ${r.address.city}, ${r.address.state}` : null),
+  lat: r.lat,
+  lng: r.lng,
+})}
 Start with "To The Officer In Charge," and end with "Yours faithfully,\\nSmart City Platform".`,
 });
 

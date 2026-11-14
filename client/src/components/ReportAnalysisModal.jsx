@@ -3,8 +3,16 @@ import Modal from './Modal.jsx';
 import { api } from '../api.js';
 import { useAuth } from '../AuthContext.jsx';
 import { useToast } from './Toast.jsx';
+import VoiceInputButton from './VoiceInputButton.jsx';
 import { EMOJI, statusLabel } from '../utils/format.js';
-import { BsCheckCircleFill, BsFileEarmarkText, BsClipboardCheck, BsShieldCheck } from 'react-icons/bs';
+import {
+  BsCheckCircleFill,
+  BsFileEarmarkText,
+  BsClipboardCheck,
+  BsShieldCheck,
+  BsPencilSquare,
+  BsCheck2,
+} from 'react-icons/bs';
 
 function formatBoldText(text) {
   if (!text) return null;
@@ -46,6 +54,7 @@ export default function ReportAnalysisModal({ report, onClose, onUpdate, isNewSu
   const [letter, setLetter] = useState(report.complaintLetter || '');
   const [drafting, setDrafting] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isEditingLetter, setIsEditingLetter] = useState(false);
 
   const isAuthor = Boolean(report.mine);
   const stepsList = parseSteps(report.steps);
@@ -119,6 +128,14 @@ export default function ReportAnalysisModal({ report, onClose, onUpdate, isNewSu
             <span><strong>Reported by:</strong> {report.userName || 'Resident'}</span>
             <span>📍 {Number(report.lat).toFixed(4)}, {Number(report.lng).toFixed(4)}</span>
           </div>
+          {report.address && (report.address.area || report.address.city || report.address.formatted) && (
+            <div className="text-xs text-slate-700 bg-white/90 border border-slate-200 px-3 py-1.5 rounded-xl flex items-center gap-1.5">
+              <span className="text-blue-600 font-bold">📍 Location:</span>
+              <span>
+                {[report.address.area, report.address.city, report.address.state, report.address.country].filter(Boolean).join(', ') || report.address.formatted}
+              </span>
+            </div>
+          )}
           <p className="text-slate-800 text-xs sm:text-sm font-medium leading-relaxed m-0">
             {report.description}
           </p>
@@ -222,15 +239,79 @@ export default function ReportAnalysisModal({ report, onClose, onUpdate, isNewSu
               </div>
             ) : (
               <div className="flex flex-col gap-2.5">
-                <pre className="letter max-h-56 overflow-y-auto">{letter}</pre>
-                <div className="flex items-center gap-2">
-                  <button
-                    className="bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs py-2 px-4 rounded-full transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
-                    onClick={handleCopy}
-                  >
-                    <BsClipboardCheck size={13} />
-                    <span>{copied ? 'Copied!' : 'Copy Letter'}</span>
-                  </button>
+                {isEditingLetter ? (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between text-xs text-slate-500">
+                      <span className="font-semibold text-blue-700">✏️ Editing Formal Letter:</span>
+                      <VoiceInputButton
+                        onTranscript={(text) => {
+                          setLetter((prev) => (prev ? `${prev}\n${text}` : text));
+                          toast.success('Voice dictation appended to letter');
+                        }}
+                        title="Dictate into formal letter"
+                      />
+                    </div>
+                    <textarea
+                      rows={8}
+                      className="w-full p-3.5 rounded-xl border border-blue-300 font-mono text-xs leading-relaxed text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                      value={letter}
+                      onChange={(e) => setLetter(e.target.value)}
+                      placeholder="Edit formal letter text..."
+                    />
+                  </div>
+                ) : (
+                  <pre className="letter max-h-56 overflow-y-auto">{letter}</pre>
+                )}
+
+                <div className="flex items-center justify-between gap-2 flex-wrap pt-1">
+                  <div className="flex items-center gap-2">
+                    <button
+                      className="bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs py-2 px-4 rounded-full transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
+                      onClick={handleCopy}
+                    >
+                      <BsClipboardCheck size={13} />
+                      <span>{copied ? 'Copied!' : 'Copy Letter'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs py-2 px-4 rounded-full transition-all cursor-pointer shadow-2xs flex items-center gap-1.5"
+                      onClick={async () => {
+                        if (isEditingLetter) {
+                          try {
+                            await api.put(`/reports/${report.id}/letter`, { letter });
+                            toast.success('Letter edits saved to report');
+                          } catch {
+                            toast.success('Letter edits saved locally');
+                          }
+                          onUpdate?.({ ...report, complaintLetter: letter });
+                        }
+                        setIsEditingLetter(!isEditingLetter);
+                      }}
+                    >
+                      {isEditingLetter ? (
+                        <>
+                          <BsCheck2 size={14} className="text-emerald-600 font-bold" />
+                          <span>Done Editing</span>
+                        </>
+                      ) : (
+                        <>
+                          <BsPencilSquare size={13} className="text-blue-600" />
+                          <span>Edit Letter</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {!isEditingLetter && (
+                    <VoiceInputButton
+                      onTranscript={(text) => {
+                        setLetter((prev) => (prev ? `${prev}\n${text}` : text));
+                        toast.success('Voice dictation appended to letter');
+                      }}
+                      title="Dictate to append into letter"
+                    />
+                  )}
                 </div>
               </div>
             )}
