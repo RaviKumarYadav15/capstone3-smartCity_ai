@@ -243,13 +243,7 @@ export default function ReportAnalysisModal({ report, onClose, onUpdate, isNewSu
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center justify-between text-xs text-slate-500">
                       <span className="font-semibold text-blue-700">✏️ Editing Formal Letter:</span>
-                      <VoiceInputButton
-                        onTranscript={(text) => {
-                          setLetter((prev) => (prev ? `${prev}\n${text}` : text));
-                          toast.success('Voice dictation appended to letter');
-                        }}
-                        title="Dictate into formal letter"
-                      />
+                      <span className="text-[11px] text-slate-400">Speak or edit text below</span>
                     </div>
                     <textarea
                       rows={8}
@@ -303,13 +297,13 @@ export default function ReportAnalysisModal({ report, onClose, onUpdate, isNewSu
                     </button>
                   </div>
 
-                  {!isEditingLetter && (
+                  {isEditingLetter && (
                     <VoiceInputButton
                       onTranscript={(text) => {
                         setLetter((prev) => (prev ? `${prev}\n${text}` : text));
                         toast.success('Voice dictation appended to letter');
                       }}
-                      title="Dictate to append into letter"
+                      title="Dictate into formal letter"
                     />
                   )}
                 </div>
