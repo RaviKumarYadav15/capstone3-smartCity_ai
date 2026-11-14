@@ -7,7 +7,7 @@ import { imageUpload, saveImage, removeImage } from '../middleware/upload.js';
 import { perUser } from '../middleware/limits.js';
 import { aiEnabled, analyzeIssueImage, writeComplaintLetter } from '../services/gemini.js';
 import { complaintTemplate } from '../services/letters.js';
-import { sanitizeIssueReport, CATEGORIES, DEPARTMENTS } from '../utils/sanitize.js';
+import { sanitizeIssueReport, CATEGORIES, DEPARTMENTS, LEVELS } from '../utils/sanitize.js';
 import { detectImageType } from '../utils/image.js';
 
 const router = Router();
@@ -98,15 +98,17 @@ router.post('/', requireAuth, perUser(10), imageUpload, asyncHandler(async (req,
   if (req.file) {
     const type = detectImageType(req.file.buffer);
     if (!type) throw new HttpError(400, 'Only JPEG, PNG or WebP images are allowed');
-    if (aiEnabled()) {
-      try {
-        fields = await analyzeIssueImage({ buffer: req.file.buffer, mime: type.mime });
-        if (fields && fields.isValid === false) {
-          throw new HttpError(400, fields.rejectionReason || 'The uploaded photo does not appear to show a valid civic infrastructure issue.');
+    if (!body.category || !body.description) {
+      if (aiEnabled()) {
+        try {
+          fields = await analyzeIssueImage({ buffer: req.file.buffer, mime: type.mime });
+          if (fields && fields.isValid === false) {
+            throw new HttpError(400, fields.rejectionReason || 'The uploaded photo does not appear to show a valid civic infrastructure issue.');
+          }
+        } catch (e) {
+          if (e.status === 400) throw e;
+          console.warn('AI analysis temporarily unavailable, proceeding with citizen category:', e.message);
         }
-      } catch (e) {
-        if (e.status === 400) throw e;
-        console.warn('AI analysis temporarily unavailable, proceeding with citizen category:', e.message);
       }
     }
     saved = await saveImage(req.file.buffer);

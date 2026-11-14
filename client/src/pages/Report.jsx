@@ -737,44 +737,6 @@ export default function Report() {
                 </div>
               </div>
 
-              {/* AI Draft helper banner with manual editing action */}
-              {aiDraftGenerated && description && (
-                <div className="mb-2 p-2.5 px-3.5 bg-blue-50 border border-blue-200/90 rounded-xl text-xs text-blue-900 flex items-center justify-between gap-2 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <FaEdit className="text-blue-600 shrink-0 text-sm" />
-                    <span>
-                      <strong>AI Draft Loaded:</strong> The text below is editable — click to add street landmarks or speak.
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 ml-auto">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        descTextareaRef.current?.focus();
-                        const len = descTextareaRef.current?.value.length || 0;
-                        descTextareaRef.current?.setSelectionRange(len, len);
-                      }}
-                      className="text-blue-700 font-bold bg-white border border-blue-300 hover:bg-blue-100 px-2.5 py-1 rounded-lg text-xs cursor-pointer shadow-2xs"
-                    >
-                      ✏️ Edit Text
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (window.confirm('Reset and clear description text?')) {
-                          setDescription('');
-                          setAiDraftGenerated(false);
-                        }
-                      }}
-                      className="text-slate-400 hover:text-red-600 text-[11px] underline cursor-pointer"
-                      title="Clear and reset text"
-                    >
-                      Reset
-                    </button>
-                  </div>
-                </div>
-              )}
-
               {/* Listening feedback indicator */}
               {isListening && (
                 <div className="mb-2 p-2.5 px-3.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 flex items-center gap-2 animate-pulse">

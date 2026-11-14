@@ -66,7 +66,7 @@ export function serializeReport(doc, userId, userRole = null) {
       pincode: r.address.pincode || '',
       formatted: r.address.formatted || '',
     } : null,
-    imageUrl: r.image ? (r.image.startsWith('http') ? r.image : `/uploads/${r.image}`) : null,
+    imageUrl: r.image ? (r.image.startsWith('http') || r.image.startsWith('data:') ? r.image : `/uploads/${r.image}`) : null,
     userName: r.userName || 'Resident',
     createdAt: r.createdAt,
     upvotes: votes.filter((v) => v.type === 'up').length,
