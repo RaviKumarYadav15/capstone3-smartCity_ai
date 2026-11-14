@@ -30,7 +30,7 @@ export default function Navbar() {
   };
 
   return (
-    <div className="bg-[#f3f3f3] flex justify-center px-4 pt-6 transition-all relative z-50">
+    <div className="bg-[#f3f3f3] flex justify-center px-4 pt-6 transition-all relative z-[1000]">
       <div className="w-full max-w-6xl bg-gradient-to-r from-blue-50 via-blue-100 to-blue-50 rounded-3xl shadow-sm border border-slate-200/90 px-6 sm:px-8 py-3.5 flex justify-between items-center relative transition-all duration-300">
         
         {/* Brand */}
@@ -131,7 +131,7 @@ export default function Navbar() {
               </button>
 
               {showUserPopUp && (
-                <div className="absolute top-full mt-3 right-0 bg-white border border-slate-200 shadow-xl rounded-2xl p-4 w-60 z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute top-full mt-3 right-0 bg-white border border-slate-200 shadow-2xl rounded-2xl p-4 w-60 z-[1050] animate-in fade-in zoom-in-95 duration-150">
                   <div className="mb-3 border-b border-slate-100 pb-3">
                     <p className="font-bold text-slate-800 text-sm truncate">{user.name}</p>
                     <p className="text-xs text-slate-500 truncate">{user.email}</p>
