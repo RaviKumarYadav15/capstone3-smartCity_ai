@@ -284,18 +284,19 @@ export default function MapPage() {
               targetId={targetId}
               centerLocation={cityCenter}
               userLocation={userLocation}
+              isNearby5km={isNearby5km}
               zoom={cityZoom}
               fitBoundsCoords={fitBoundsCoords}
             />
 
-            {/* Floating 3D Locate Me Button */}
+            {/* Floating 3D Locate 5km Around Me Button */}
             <div className="absolute bottom-5 right-5 z-[500]">
               <button
                 type="button"
                 onClick={handleLocateToggle}
                 disabled={locatingUser}
-                title={isNearby5km ? 'Click to reset back to full view' : 'Locate my position & view 5 km nearby hazards'}
-                aria-label={isNearby5km ? 'Locate 5km Active' : 'Locate Me'}
+                title={isNearby5km ? 'Click to reset back to full view' : 'Locate 5km Around Me'}
+                aria-label="Locate 5km Around Me"
                 className={`transition-all cursor-pointer flex items-center gap-2 select-none px-4 py-2.5 sm:px-5 sm:py-3 rounded-full ${
                   isNearby5km
                     ? 'bg-gradient-to-b from-blue-500 to-blue-600 text-white border-2 border-blue-400 shadow-[0_6px_0_#1d4ed8,0_12px_22px_rgba(37,99,235,0.35)] active:translate-y-1 active:shadow-[0_2px_0_#1d4ed8,0_4px_10px_rgba(37,99,235,0.3)]'
@@ -307,24 +308,25 @@ export default function MapPage() {
                     <span className="w-4 h-4 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin"></span>
                     <span className="font-extrabold text-xs sm:text-sm">Locating...</span>
                   </>
-                ) : isNearby5km ? (
+                ) : (
                   <>
-                    <BiCurrentLocation className="text-xl sm:text-2xl text-white animate-pulse" />
-                    <span className="font-extrabold text-xs sm:text-sm tracking-tight">
-                      Locate 5km Active
+                    <BiCurrentLocation
+                      className={`text-xl sm:text-2xl transition-transform ${
+                        isNearby5km ? 'text-white animate-pulse' : 'text-blue-600 group-hover:scale-110'
+                      }`}
+                    />
+                    <span
+                      className={`font-extrabold text-xs sm:text-sm tracking-tight ${
+                        isNearby5km ? 'text-white' : 'text-slate-800'
+                      }`}
+                    >
+                      Locate 5km Around Me
                     </span>
-                    {nearby5kmCount > 0 && (
+                    {isNearby5km && nearby5kmCount > 0 && (
                       <span className="bg-white/25 text-white text-[11px] font-black px-2 py-0.5 rounded-full ml-0.5">
                         {nearby5kmCount}
                       </span>
                     )}
-                  </>
-                ) : (
-                  <>
-                    <BiCurrentLocation className="text-xl sm:text-2xl text-blue-600 group-hover:scale-110 transition-transform" />
-                    <span className="font-extrabold text-xs sm:text-sm text-slate-800 tracking-tight">
-                      Locate Me
-                    </span>
                   </>
                 )}
               </button>

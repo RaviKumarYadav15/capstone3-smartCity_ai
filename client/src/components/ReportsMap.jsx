@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, CircleMarker, Circle, Popup, useMap } from 'react-leaflet';
 import { DEFAULT_CENTER, EMOJI, SEVERITY_COLOR } from '../utils/format.js';
 
 export const LAYERS = {
@@ -67,6 +67,7 @@ export default function ReportsMap({
   targetId,
   centerLocation,
   userLocation,
+  isNearby5km,
   zoom = 13,
   fitBoundsCoords,
 }) {
@@ -90,6 +91,21 @@ export default function ReportsMap({
         zoom={zoom}
         fitBoundsCoords={fitBoundsCoords}
       />
+
+      {/* 5 km Radius Perimeter Circle when 5km mode is active */}
+      {isNearby5km && userLocation && (
+        <Circle
+          center={userLocation}
+          radius={5000}
+          pathOptions={{
+            color: '#2563eb',
+            weight: 2,
+            dashArray: '6, 6',
+            fillColor: '#3b82f6',
+            fillOpacity: 0.08,
+          }}
+        />
+      )}
 
       {/* Live User Location Pin */}
       {userLocation && (
