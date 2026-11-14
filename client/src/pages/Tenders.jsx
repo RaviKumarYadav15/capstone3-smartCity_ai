@@ -98,19 +98,13 @@ export default function Tenders() {
         <div className="flex flex-wrap items-center gap-3 pt-2">
           <div className="relative flex-1 min-w-[240px] flex items-center">
             <input
-              className="search py-2.5 pl-4 pr-32 text-sm rounded-full border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-full"
+              className="search py-2.5 px-4 text-sm rounded-full border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-full"
               type="search"
               placeholder="Search tender ID, title, contractor, department"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               aria-label="Search tenders"
             />
-            <div className="absolute right-2">
-              <VoiceInputButton
-                onTranscript={(text) => setQ((prev) => (prev ? `${prev} ${text}` : text))}
-                title="Voice search tenders"
-              />
-            </div>
           </div>
           <div className="pills flex flex-wrap gap-1.5">
             {FILTERS.map(([k, label]) => (
