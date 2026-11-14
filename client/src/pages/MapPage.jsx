@@ -83,11 +83,17 @@ export default function MapPage() {
   const load = useCallback(async () => {
     try {
       const [r, s] = await Promise.all([api.get('/reports'), api.get('/stats')]);
-      setReports(r.reports);
-      setStats(s);
+      if (r?.reports) setReports(r.reports);
+      if (s) setStats(s);
       setError('');
     } catch (e) {
-      setError(e.message);
+      // Only set visible error if no reports have loaded yet
+      setReports((current) => {
+        if (!current || current.length === 0) {
+          setError(e.message || 'Cannot reach the server');
+        }
+        return current;
+      });
     }
   }, []);
 
@@ -236,20 +242,20 @@ export default function MapPage() {
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         {/* Left Column: City Issues Map */}
         <div id="live-incident-map" className="lg:col-span-7 xl:col-span-8 bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col justify-between">
-          {/* Header Row: Title on Left, Simple Dropdowns on Right */}
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-3">
+          {/* Header Row: Title on Left, Clean City Selector on Right */}
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
             <div>
               <h1 className="text-xl sm:text-2xl font-black text-slate-900 m-0">City Issues Map</h1>
               <p className="text-xs text-slate-500 m-0 mt-0.5">Real-time public incident, hazard & infrastructure tracking</p>
             </div>
             
-            <div className="flex items-center gap-2">
+            <div>
               {/* Clean City Dropdown without Active Tag */}
               <select
                 value={selectedCity}
                 onChange={(e) => handleCityChange(e.target.value)}
                 aria-label="Select City"
-                className="text-xs font-semibold py-1.5 px-3 rounded-full border border-slate-200 bg-slate-50 hover:bg-white text-slate-700 cursor-pointer shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="text-xs font-semibold py-1.5 px-3.5 rounded-full border border-slate-200 bg-slate-50 hover:bg-white text-slate-700 cursor-pointer shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               >
                 <option value="all">🌐 All Cities ({reports.length})</option>
                 {detectedCities.map((c) => (
@@ -258,25 +264,29 @@ export default function MapPage() {
                   </option>
                 ))}
               </select>
-
-              {/* Map Tile Style */}
-              <select
-                value={layer}
-                onChange={(e) => setLayer(e.target.value)}
-                aria-label="Map Tile Style"
-                className="text-xs font-semibold py-1.5 px-3 rounded-full border border-slate-200 bg-slate-50 hover:bg-white text-slate-700 cursor-pointer shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-              >
-                {Object.entries(LAYERS).map(([k, v]) => (
-                  <option key={k} value={k}>{v.name}</option>
-                ))}
-              </select>
             </div>
           </div>
 
           {error && <p className="error p-3 rounded-xl bg-red-50 border border-red-200 my-2 text-xs">{error}</p>}
           
-          {/* Map Frame with Large 3D Floating Locate Button */}
+          {/* Map Frame with Floating Map Controls */}
           <div className="relative rounded-2xl overflow-hidden border border-slate-200 flex-1 min-h-[380px] sm:min-h-[440px]">
+            {/* Top Right Floating Map Style Dropdown on the Map Itself */}
+            <div className="absolute top-3 right-3 z-[500]">
+              <select
+                value={layer}
+                onChange={(e) => setLayer(e.target.value)}
+                aria-label="Map Tile Style"
+                className="text-xs font-semibold py-1.5 px-3 rounded-xl border border-slate-200/90 bg-white/95 backdrop-blur-md text-slate-700 cursor-pointer shadow-md hover:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition"
+              >
+                {Object.entries(LAYERS).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <ReportsMap
               reports={visible}
               layer={layer}

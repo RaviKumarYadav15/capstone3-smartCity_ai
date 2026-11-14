@@ -125,8 +125,8 @@ export default function Admin() {
                     <span className="text-xs font-semibold text-slate-600">{r.department}</span>
                   </div>
                   <p className="text-xs text-slate-700 m-0 mb-1 leading-relaxed">{r.description}</p>
-                  <p className="text-[11px] text-slate-400 m-0">
-                    Reported by {r.userName} · {formatDate(r.createdAt)} · 📍 {r.lat.toFixed(4)}, {r.lng.toFixed(4)}
+                  <p className="text-[11px] text-slate-500 m-0">
+                    Reported by {r.userName} · {formatDate(r.createdAt)} · 📍 {r.address?.formatted || [r.address?.area, r.address?.city].filter(Boolean).join(', ') || `${r.lat.toFixed(4)}, ${r.lng.toFixed(4)}`}
                   </p>
                 </div>
 

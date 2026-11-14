@@ -12,12 +12,20 @@ export function resolveImageUrl(url) {
   return `${API_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
 }
 
-async function request(path, { method = 'GET', body, form } = {}) {
+async function request(path, { method = 'GET', body, form } = {}, retries = 1) {
   const opts = { method, credentials: 'include', headers: {} };
   if (form) opts.body = form; // browser sets the multipart boundary
   else if (body !== undefined) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
   let res;
-  try { res = await fetch(`${API_BASE}/api${path}`, opts); } catch { throw new ApiError('Cannot reach the server', 0); }
+  try {
+    res = await fetch(`${API_BASE}/api${path}`, opts);
+  } catch (err) {
+    if (retries > 0 && method === 'GET') {
+      await new Promise((r) => setTimeout(r, 1200));
+      return request(path, { method, body, form }, retries - 1);
+    }
+    throw new ApiError('Cannot reach the server', 0);
+  }
   const data = res.status === 204 ? null : await res.json().catch(() => null);
   if (!res.ok) throw new ApiError(data?.rejectionReason || data?.error || `Request failed (${res.status})`, res.status);
   return data;

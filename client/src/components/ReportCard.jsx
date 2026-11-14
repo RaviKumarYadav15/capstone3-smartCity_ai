@@ -1,14 +1,36 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { api, resolveImageUrl } from '../api.js';
 import { useAuth } from '../AuthContext.jsx';
 import { useToast } from './Toast.jsx';
 import ReportAnalysisModal from './ReportAnalysisModal.jsx';
 import { EMOJI, formatDate, statusLabel } from '../utils/format.js';
+import { reverseGeocode } from '../utils/geocode.js';
 
 export default function ReportCard({ report: r, onChange, onLocate }) {
   const { user, openAuthModal } = useAuth();
   const toast = useToast();
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
+  const [address, setAddress] = useState(
+    r.address?.formatted ||
+    [r.address?.area, r.address?.city, r.address?.state].filter(Boolean).join(', ') ||
+    r.address?.city ||
+    r.city ||
+    ''
+  );
+
+  useEffect(() => {
+    if (!address && typeof r.lat === 'number' && typeof r.lng === 'number') {
+      let active = true;
+      reverseGeocode(r.lat, r.lng)
+        .then((geo) => {
+          if (active && geo?.formatted) {
+            setAddress(geo.formatted);
+          }
+        })
+        .catch(() => {});
+      return () => { active = false; };
+    }
+  }, [r.lat, r.lng, address]);
 
   const act = async (path, body) => {
     if (!user) {
@@ -58,19 +80,29 @@ export default function ReportCard({ report: r, onChange, onLocate }) {
         </div>
 
         <div>
-          <div className="meta flex justify-between items-center text-xs text-slate-500 pt-2 border-t border-slate-100 mb-1">
+          {/* Actual Fetched Street Address */}
+          {address ? (
+            <div className="text-xs text-slate-700 font-medium flex items-start gap-1.5 pt-2 border-t border-slate-100 mb-1.5 bg-slate-50/70 p-2 rounded-xl border border-slate-100/80">
+              <span className="text-blue-600 mt-0.5 shrink-0 text-sm">📍</span>
+              <span className="line-clamp-2 leading-relaxed" title={address}>
+                {address}
+              </span>
+            </div>
+          ) : null}
+
+          <div className={`meta flex justify-between items-center text-xs text-slate-500 mb-1 ${!address ? 'pt-2 border-t border-slate-100' : ''}`}>
             {onLocate ? (
               <button
                 type="button"
                 onClick={() => onLocate(r)}
-                className="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                className="text-xs text-blue-600 hover:text-blue-800 font-mono font-semibold flex items-center gap-1 cursor-pointer transition-colors"
                 title="Click to locate on the map above"
               >
-                <span>📍</span>
-                <span>{r.lat.toFixed(3)}, {r.lng.toFixed(3)}</span>
+                <span>🎯</span>
+                <span>GPS: {Number(r.lat).toFixed(4)}, {Number(r.lng).toFixed(4)}</span>
               </button>
             ) : (
-              <span>📍 {r.lat.toFixed(3)}, {r.lng.toFixed(3)}</span>
+              <span className="font-mono">🎯 GPS: {Number(r.lat).toFixed(4)}, {Number(r.lng).toFixed(4)}</span>
             )}
             <span>{formatDate(r.createdAt)}</span>
           </div>
