@@ -387,97 +387,21 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
 
   return (
     <>
-      {/* Top Global Scope Bar (Represents the Whole Dashboard) */}
-      <div className="bg-white border border-slate-200/90 rounded-3xl p-4 sm:p-5 shadow-sm mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center text-xl shadow-md shrink-0">
-            🏙️
-          </div>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[11px] font-black uppercase tracking-wider text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
-                Dashboard Scope
-              </span>
-              {isNearby5km ? (
-                <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> Live 5 km GPS Radar
-                </span>
-              ) : selectedCity !== 'all' ? (
-                <span className="text-[11px] font-bold text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200">
-                  📍 City Filtered
-                </span>
-              ) : null}
-            </div>
-            <p className="text-sm font-bold text-slate-900 m-0 mt-0.5">
-              {isNearby5km && userLocation
-                ? `Showing ${reportsInCity.length} reports within 5 km of your GPS location`
-                : selectedCity === 'all'
-                ? `All Municipalities · ${reports.length} Total Public Incidents Tracked`
-                : `${selectedCity} Municipal Zone · ${reportsInCity.length} Reports Tracked`}
-            </p>
-          </div>
-        </div>
-
-        {/* Scope Controls: City Dropdown + 3D Locate 5km Button */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* City Dropdown */}
-          <div className="relative">
-            <select
-              value={selectedCity}
-              onChange={(e) => handleCityChange(e.target.value)}
-              aria-label="Select City Scope"
-              className="text-xs sm:text-sm font-bold py-2.5 px-3.5 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:bg-white text-slate-800 cursor-pointer shadow-xs focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-            >
-              <option value="all">🌐 All Cities ({reports.length} Total)</option>
-              {detectedCities.map((c) => (
-                <option key={c.name} value={c.name}>
-                  📍 {c.name} ({c.count})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* 3D Locate 5km Around Me Button */}
-          <button
-            type="button"
-            onClick={handleLocateToggle}
-            disabled={locatingUser}
-            title={isNearby5km ? 'Click to reset back to full view' : 'Locate 5km Around Me'}
-            aria-label="Locate 5km Around Me"
-            className={`transition-all cursor-pointer flex items-center gap-2 select-none px-4 py-2.5 rounded-2xl ${
-              isNearby5km
-                ? 'bg-gradient-to-b from-blue-500 to-blue-600 text-white border-2 border-blue-400 shadow-[0_5px_0_#1d4ed8,0_10px_20px_rgba(37,99,235,0.35)] active:translate-y-1 active:shadow-[0_2px_0_#1d4ed8]'
-                : 'bg-gradient-to-b from-white via-slate-50 to-slate-100 text-slate-800 border-2 border-slate-300 shadow-[0_5px_0_#94a3b8,0_10px_20px_rgba(0,0,0,0.15)] active:translate-y-1 active:shadow-[0_2px_0_#94a3b8] hover:from-white hover:to-blue-50'
-            }`}
-          >
-            {locatingUser ? (
-              <>
-                <span className="w-4 h-4 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin"></span>
-                <span className="font-extrabold text-xs sm:text-sm">Locating...</span>
-              </>
-            ) : (
-              <>
-                <BiCurrentLocation
-                  className={`text-xl transition-transform ${
-                    isNearby5km ? 'text-white animate-pulse' : 'text-blue-600 group-hover:scale-110'
-                  }`}
-                />
-                <span
-                  className={`font-extrabold text-xs sm:text-sm tracking-tight ${
-                    isNearby5km ? 'text-white' : 'text-slate-800'
-                  }`}
-                >
-                  Locate 5km Around Me
-                </span>
-                {isNearby5km && nearby5kmCount > 0 && (
-                  <span className="bg-white/25 text-white text-[11px] font-black px-2 py-0.5 rounded-full ml-0.5">
-                    {nearby5kmCount}
-                  </span>
-                )}
-              </>
-            )}
-          </button>
-        </div>
+      {/* Top City Selector (Above the Dashboard & Heading) */}
+      <div className="flex justify-end mb-4">
+        <select
+          value={selectedCity}
+          onChange={(e) => handleCityChange(e.target.value)}
+          aria-label="Select City"
+          className="w-full sm:w-auto text-xs sm:text-sm font-bold py-2 px-4 rounded-full border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 cursor-pointer shadow-xs focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+        >
+          <option value="all">🌐 All Cities ({reports.length} Total)</option>
+          {detectedCities.map((c) => (
+            <option key={c.name} value={c.name}>
+              📍 {c.name} ({c.count})
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Top 2-Column Section: Map on Left, Two Status Rows on Right */}
