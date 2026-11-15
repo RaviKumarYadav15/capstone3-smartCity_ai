@@ -18,15 +18,24 @@ const disputeSchema = new mongoose.Schema({
 
 export const Dispute = mongoose.model('Dispute', disputeSchema);
 
-export const serializeDispute = (doc, userId) => {
+export const serializeDispute = (doc, userId, userRole = null) => {
   const d = doc.toObject ? doc.toObject() : doc;
   const uid = userId ? String(userId) : null;
+  const isAuthor = uid ? String(d.user) === uid : false;
+  const isAdmin = userRole === 'admin';
+  const canSeeLetter = isAuthor || isAdmin;
   return {
-    id: String(d._id), tenderId: d.tenderId, category: d.category, description: d.description,
-    imageUrl: publicImageUrl(d.image), userName: d.userName || 'Citizen',
+    id: String(d._id),
+    tenderId: d.tenderId,
+    category: d.category,
+    description: d.description,
+    imageUrl: publicImageUrl(d.image),
+    userName: d.userName || 'Citizen',
     supportCount: (d.supporters ?? []).length,
     iSupported: uid ? (d.supporters ?? []).some((s) => String(s) === uid) : false,
-    mine: uid ? String(d.user) === uid : false,
-    status: d.status, letter: d.letter, createdAt: d.createdAt,
+    mine: isAuthor,
+    status: d.status,
+    ...(canSeeLetter && d.letter ? { letter: d.letter } : {}),
+    createdAt: d.createdAt,
   };
 };

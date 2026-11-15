@@ -11,6 +11,12 @@ import { Dispute } from '../models/Dispute.js';
 
 if (env.isProd) { console.error('Refusing to seed demo accounts in production.'); process.exit(1); }
 
+const isLocalDb = env.mongoUri.includes('127.0.0.1') || env.mongoUri.includes('localhost');
+if (!isLocalDb && !process.argv.includes('--allow-remote')) {
+  console.error('Refusing to seed a non-local database without explicit --allow-remote flag.');
+  process.exit(1);
+}
+
 const PASSWORD = process.env.SEED_PASSWORD || 'Passw0rd!demo';
 await connectDb();
 if (process.argv.includes('--reset')) await Promise.all([User.deleteMany(), Report.deleteMany(), Tender.deleteMany(), Dispute.deleteMany()]);

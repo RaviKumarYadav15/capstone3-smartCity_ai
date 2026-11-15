@@ -38,7 +38,7 @@ router.get('/', asyncHandler(async (req, res) => {
   }
   const docs = await Tender.find(filter).select('-aiBreakdown').sort({ createdAt: -1 }).limit(100);
   const counts = await disputeCounts(docs.map((d) => d.tenderId));
-  let tenders = docs.map((d) => serializeTender(d, counts[d.tenderId] ?? 0));
+  let tenders = docs.map((d) => serializeTender(d, counts[d.tenderId] ?? 0, req.user?.role));
   if (req.query.disputed === 'true') tenders = tenders.filter((t) => t.disputeCount > 0);
   res.json({ tenders });
 }));
@@ -48,7 +48,7 @@ router.get('/:tenderId', asyncHandler(async (req, res) => {
   if (!t) throw new HttpError(404, 'Tender not found');
   const counts = await disputeCounts([t.tenderId]);
   const disputes = await Dispute.find({ tenderId: t.tenderId, status: { $ne: 'dismissed' } }).select('-letter').sort({ createdAt: -1 }).limit(50);
-  res.json({ tender: serializeTender(t, counts[t.tenderId] ?? 0), disputes: disputes.map((d) => serializeDispute(d, req.user?._id)) });
+  res.json({ tender: serializeTender(t, counts[t.tenderId] ?? 0, req.user?.role), disputes: disputes.map((d) => serializeDispute(d, req.user?._id, req.user?.role)) });
 }));
 
 // Only verified authority accounts publish tenders (role granted by an admin, never self-assigned).
@@ -58,7 +58,7 @@ router.post('/', requireRole('authority', 'admin'), perUser(20), asyncHandler(as
   let aiBreakdown = null;
   if (aiEnabled()) { try { aiBreakdown = await breakdownTender(body); } catch (e) { console.warn('Tender breakdown skipped:', e.message); } }
   const tender = await Tender.create({ ...body, aiBreakdown, createdBy: req.user._id });
-  res.status(201).json({ tender: serializeTender(tender, 0) });
+  res.status(201).json({ tender: serializeTender(tender, 0, req.user.role) });
 }));
 
 router.post('/:tenderId/breakdown', requireAuth, perUser(15), asyncHandler(async (req, res) => {
@@ -80,7 +80,19 @@ router.post('/:tenderId/breakdown', requireAuth, perUser(15), asyncHandler(async
   }
 
   const counts = await disputeCounts([tender.tenderId]);
-  res.json({ tender: serializeTender(tender, counts[tender.tenderId] ?? 0) });
+  res.json({ tender: serializeTender(tender, counts[tender.tenderId] ?? 0, req.user.role) });
+}));
+
+router.patch('/:tenderId/approve-verdict', requireRole('authority', 'admin'), asyncHandler(async (req, res) => {
+  const tender = await Tender.findOne({ tenderId: req.params.tenderId.toUpperCase() });
+  if (!tender) throw new HttpError(404, 'Tender not found');
+  if (!tender.aiBreakdown?.feasibility) throw new HttpError(400, 'No AI feasibility breakdown exists to approve');
+  tender.aiBreakdown.feasibility.approved = true;
+  tender.aiBreakdown.feasibility.approvedBy = req.user._id;
+  tender.markModified('aiBreakdown');
+  await tender.save();
+  const counts = await disputeCounts([tender.tenderId]);
+  res.json({ tender: serializeTender(tender, counts[tender.tenderId] ?? 0, req.user.role) });
 }));
 
 router.delete('/:tenderId', requireRole('admin'), asyncHandler(async (req, res) => {
@@ -108,7 +120,7 @@ router.post('/:tenderId/disputes', requireAuth, perUser(10), imageUpload, asyncH
   const dispute = await Dispute.create({
     tenderId: tender.tenderId, ...body, image: saved?.name, user: req.user._id, userName: req.user.name, supporters: [req.user._id], letter,
   });
-  res.status(201).json({ dispute: serializeDispute(dispute, req.user._id) });
+  res.status(201).json({ dispute: serializeDispute(dispute, req.user._id, req.user.role) });
 }));
 
 export default router;

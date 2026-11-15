@@ -10,8 +10,8 @@ export const signToken = (user) => jwt.sign({ sub: String(user._id) }, env.jwtSe
 export const setAuthCookie = (res, token) =>
   res.cookie('token', token, {
     httpOnly: true,
-    sameSite: env.isProd ? 'none' : 'lax',
-    secure: env.isProd ? true : env.cookieSecure,
+    sameSite: env.cookieSameSite || 'lax',
+    secure: env.cookieSecure,
     maxAge: WEEK,
     path: '/',
   });
@@ -19,8 +19,8 @@ export const setAuthCookie = (res, token) =>
 export const clearAuthCookie = (res) =>
   res.clearCookie('token', {
     path: '/',
-    sameSite: env.isProd ? 'none' : 'lax',
-    secure: env.isProd ? true : env.cookieSecure,
+    sameSite: env.cookieSameSite || 'lax',
+    secure: env.cookieSecure,
   });
 
 /** Attaches req.user (fresh from DB, so role changes/deletions apply immediately) or null. */

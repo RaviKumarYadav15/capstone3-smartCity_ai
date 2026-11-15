@@ -18,6 +18,21 @@ export default function TenderModal({ tenderId, onClose, onDispute }) {
     load();
   }, [tenderId]);
 
+  const [approving, setApproving] = useState(false);
+
+  const approveVerdict = async () => {
+    setApproving(true);
+    try {
+      await api.patch(`/tenders/${encodeURIComponent(tenderId)}/approve-verdict`);
+      await load();
+      toast('AI estimate approved for public display');
+    } catch (e) {
+      toast(e.message);
+    } finally {
+      setApproving(false);
+    }
+  };
+
   const support = async (id) => {
     if (!user) {
       toast('Please sign in to support this report');
@@ -63,24 +78,31 @@ export default function TenderModal({ tenderId, onClose, onDispute }) {
   const b = t.aiBreakdown;
   const feas = b?.feasibility;
 
-  const verdictBadge = (verdict) => {
+  const verdictBadge = (verdict, approved, unreviewed) => {
+    if (unreviewed || !approved) {
+      return (
+        <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300 inline-flex items-center gap-1.5" title="Preliminary AI estimate pending municipal authority approval">
+          <span className="w-2 h-2 rounded-full bg-slate-400"></span> AI Estimate (Pending Municipal Verification)
+        </span>
+      );
+    }
     if (verdict === 'within_benchmark') {
       return (
         <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 inline-flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Within Standard Benchmark Norms
+          <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Within Standard Benchmark Norms (AI Estimate & Verified)
         </span>
       );
     }
     if (verdict === 'flagged_variance') {
       return (
         <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-300 inline-flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-amber-500"></span> High Cost Variance Detected
+          <span className="w-2 h-2 rounded-full bg-amber-500"></span> High Cost Variance Detected (AI Estimate & Verified)
         </span>
       );
     }
     return (
       <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300 inline-flex items-center gap-1.5">
-        <span className="w-2 h-2 rounded-full bg-slate-400"></span> Human Verification / Field Audit Needed
+        <span className="w-2 h-2 rounded-full bg-slate-400"></span> AI Estimate: Field Audit Needed
       </span>
     );
   };
@@ -115,18 +137,36 @@ export default function TenderModal({ tenderId, onClose, onDispute }) {
       {/* AI Expense Legitimacy & Feasibility Section */}
       <div className="my-6 p-5 rounded-2xl border border-slate-200 bg-white shadow-xs">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-          <div>
+          <div className="flex items-center gap-2">
             <h3 className="text-lg font-bold text-slate-900 m-0">Tender Expense Legitimacy & Breakdown</h3>
+            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 uppercase tracking-wide">
+              AI Estimate
+            </span>
           </div>
-          {feas ? verdictBadge(feas.verdict) : (
-            <button
-              className="bg-gradient-to-b from-blue-900 to-blue-600 hover:from-blue-950 hover:to-blue-700 text-white font-semibold text-xs py-2 px-4 rounded-full transition-all cursor-pointer shadow-xs disabled:opacity-50 inline-flex items-center gap-1.5"
-              onClick={verifyWithAi}
-              disabled={busy}
-            >
-              {busy ? 'Auditing with AI' : '⚡ Audit & Verify with AI'}
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {feas ? (
+              <>
+                {verdictBadge(feas.verdict, feas.approved, feas.unreviewed)}
+                {['authority', 'admin'].includes(user?.role) && !feas.approved && (
+                  <button
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs py-1.5 px-3 rounded-full transition-all cursor-pointer shadow-xs inline-flex items-center gap-1"
+                    onClick={approveVerdict}
+                    disabled={approving}
+                  >
+                    {approving ? 'Approving...' : '✓ Approve AI Verdict'}
+                  </button>
+                )}
+              </>
+            ) : (
+              <button
+                className="bg-gradient-to-b from-blue-900 to-blue-600 hover:from-blue-950 hover:to-blue-700 text-white font-semibold text-xs py-2 px-4 rounded-full transition-all cursor-pointer shadow-xs disabled:opacity-50 inline-flex items-center gap-1.5"
+                onClick={verifyWithAi}
+                disabled={busy}
+              >
+                {busy ? 'Auditing with AI' : '⚡ Audit & Verify with AI'}
+              </button>
+            )}
+          </div>
         </div>
 
         {b ? (

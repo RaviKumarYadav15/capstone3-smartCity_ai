@@ -40,7 +40,7 @@ export async function saveImage(buffer) {
   const ext = type.mime === 'image/png' ? 'png' : type.mime === 'image/webp' ? 'webp' : 'jpg';
   const filename = `${crypto.randomUUID()}.${ext}`;
 
-  // 1. Try Cloudinary if configured with 4s timeout
+  // 1. Try Cloudinary if configured with 15s timeout
   const isCloudinaryConfigured = Boolean(
     (env.cloudinaryCloudName && env.cloudinaryApiKey && env.cloudinaryApiSecret) || env.cloudinaryUrl
   );
@@ -48,7 +48,7 @@ export async function saveImage(buffer) {
   if (isCloudinaryConfigured) {
     try {
       const result = await new Promise((resolve, reject) => {
-        const timer = setTimeout(() => reject(new Error('Cloudinary upload timeout')), 4000);
+        const timer = setTimeout(() => reject(new Error('Cloudinary upload timeout')), 15000);
         const stream = cloudinary.uploader.upload_stream(
           { folder: 'smartcity', resource_type: 'image' },
           (err, res) => {
@@ -64,11 +64,16 @@ export async function saveImage(buffer) {
         return { name: result.secure_url, mime: type.mime, publicId: result.public_id };
       }
     } catch (err) {
-      console.warn('Cloudinary upload not completed, falling back to local file storage:', err.message);
+      if (env.isProd) {
+        throw new HttpError(502, `Image storage failed: ${err.message}`);
+      }
+      console.warn('Cloudinary upload failed, falling back to local file storage:', err.message);
     }
+  } else if (env.isProd) {
+    throw new HttpError(502, 'Image storage service is not configured');
   }
 
-  // 2. Fallback to local server uploads directory
+  // 2. Fallback to local server uploads directory (development)
   try {
     const uploadDir = path.resolve(process.cwd(), 'uploads');
     if (!fs.existsSync(uploadDir)) {
@@ -78,10 +83,7 @@ export async function saveImage(buffer) {
     await fs.promises.writeFile(filePath, buffer);
     return { name: filename, mime: type.mime, local: true };
   } catch (fsErr) {
-    console.warn('Local file write failed, using data URI fallback:', fsErr.message);
-    // 3. Fallback to base64 Data URI directly in MongoDB
-    const dataUri = `data:${type.mime};base64,${buffer.toString('base64')}`;
-    return { name: dataUri, mime: type.mime };
+    throw new HttpError(500, `Failed to save image: ${fsErr.message}`);
   }
 }
 

@@ -22,6 +22,8 @@ const tenderSchema = new mongoose.Schema({
       summary: String,
       keyObservations: [String],
       citizenQuestions: [String],
+      approved: { type: Boolean, default: false },
+      approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     },
     generatedAt: Date,
   },
@@ -30,12 +32,25 @@ const tenderSchema = new mongoose.Schema({
 
 export const Tender = mongoose.model('Tender', tenderSchema);
 
-export const serializeTender = (doc, disputeCount = 0) => {
+export const serializeTender = (doc, disputeCount = 0, userRole = null) => {
   const t = doc.toObject ? doc.toObject() : doc;
+  let aiBreakdown = (t.aiBreakdown?.table?.length || t.aiBreakdown?.feasibility) ? { ...t.aiBreakdown } : null;
+  if (aiBreakdown?.feasibility) {
+    const isPrivileged = userRole === 'admin' || userRole === 'authority';
+    const isApproved = Boolean(aiBreakdown.feasibility.approved);
+    if (!isApproved && !isPrivileged) {
+      aiBreakdown.feasibility = {
+        ...aiBreakdown.feasibility,
+        verdict: 'human_audit_needed',
+        summary: 'Automated preliminary estimate generated. Pending review and verification by municipal authority.',
+        unreviewed: true,
+      };
+    }
+  }
   return {
     tenderId: t.tenderId, title: t.title, budget: t.budget, department: t.department, contractor: t.contractor,
     location: t.location, deadline: t.deadline, warranty: t.warranty, specs: t.specs, status: t.status,
-    aiBreakdown: (t.aiBreakdown?.table?.length || t.aiBreakdown?.feasibility) ? t.aiBreakdown : null,
+    aiBreakdown,
     disputeCount, createdAt: t.createdAt,
   };
 };

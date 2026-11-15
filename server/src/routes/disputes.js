@@ -9,12 +9,15 @@ const router = Router();
 // admin moderation queue
 router.get('/', requireRole('admin'), asyncHandler(async (req, res) => {
   const docs = await Dispute.find().sort({ createdAt: -1 }).limit(200);
-  res.json({ disputes: docs.map((d) => serializeDispute(d, req.user._id)) });
+  res.json({ disputes: docs.map((d) => serializeDispute(d, req.user._id, req.user.role)) });
 }));
 
 router.get('/:id/letter', requireAuth, asyncHandler(async (req, res) => {
   const d = await Dispute.findById(req.params.id);
   if (!d) throw new HttpError(404, 'Dispute not found');
+  if (String(d.user) !== String(req.user._id) && req.user.role !== 'admin') {
+    throw new HttpError(403, 'Forbidden');
+  }
   res.json({ letter: d.letter });
 }));
 
@@ -22,14 +25,14 @@ router.get('/:id/letter', requireAuth, asyncHandler(async (req, res) => {
 router.post('/:id/support', requireAuth, asyncHandler(async (req, res) => {
   const d = await Dispute.findByIdAndUpdate(req.params.id, { $addToSet: { supporters: req.user._id } }, { new: true });
   if (!d) throw new HttpError(404, 'Dispute not found');
-  res.json({ dispute: serializeDispute(d, req.user._id) });
+  res.json({ dispute: serializeDispute(d, req.user._id, req.user.role) });
 }));
 
 router.patch('/:id', requireRole('admin'), asyncHandler(async (req, res) => {
   const { status } = z.object({ status: z.enum(['open', 'reviewed', 'dismissed']) }).parse(req.body);
   const d = await Dispute.findByIdAndUpdate(req.params.id, { status }, { new: true });
   if (!d) throw new HttpError(404, 'Dispute not found');
-  res.json({ dispute: serializeDispute(d, req.user._id) });
+  res.json({ dispute: serializeDispute(d, req.user._id, req.user.role) });
 }));
 
 export default router;

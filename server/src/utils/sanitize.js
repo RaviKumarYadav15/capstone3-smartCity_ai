@@ -23,7 +23,7 @@ const str = (v, max) => String(v ?? '').trim().slice(0, max);
 const level = (v, fallback = 'medium') => (LEVELS.includes(String(v).toLowerCase()) ? String(v).toLowerCase() : fallback);
 
 export function sanitizeIssueReport(ai = {}) {
-  const isValid = ai.isValid !== false;
+  const isValid = ai.isValid === true;
   const rejectionReason = str(ai.rejectionReason, 250);
   if (!isValid) {
     return {

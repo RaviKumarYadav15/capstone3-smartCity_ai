@@ -2,14 +2,23 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { sanitizeIssueReport, sanitizeTenderBreakdown, sanitizePrediction } from '../src/utils/sanitize.js';
 
-test('AI issue output is clamped to a known shape', () => {
-  const r = sanitizeIssueReport({ category: '<script>', severity: 'BANANA', priority: '99', description: 'x'.repeat(9999) });
+test('AI issue output is clamped to a known shape when valid', () => {
+  const r = sanitizeIssueReport({ isValid: true, category: '<script>', severity: 'BANANA', priority: '99', description: 'x'.repeat(9999) });
   assert.equal(r.isValid, true);
   assert.equal(r.category, 'other');
   assert.equal(r.severity, 'medium');
   assert.equal(r.priority, 10);
   assert.equal(r.description.length, 500);
   assert.equal(r.department, 'Municipal Corporation');
+});
+
+test('fails closed: rejects when isValid is missing, falsy, or not explicitly true', () => {
+  const r1 = sanitizeIssueReport({});
+  assert.equal(r1.isValid, false);
+  const r2 = sanitizeIssueReport({ isValid: false });
+  assert.equal(r2.isValid, false);
+  const r3 = sanitizeIssueReport({ isValid: 'true' });
+  assert.equal(r3.isValid, false);
 });
 
 test('rejects non-civic image with descriptive reason', () => {

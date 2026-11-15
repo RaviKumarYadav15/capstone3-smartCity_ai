@@ -22,6 +22,7 @@ export const env = {
   cloudinaryApiKey: process.env.CLOUDINARY_API_KEY || '',
   cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET || '',
   cookieSecure: (process.env.COOKIE_SECURE ?? String(isProd)) === 'true',
+  cookieSameSite: process.env.COOKIE_SAMESITE || 'lax',
   trustProxy: process.env.TRUST_PROXY === 'true',
 };
 

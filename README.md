@@ -377,10 +377,10 @@ cd smart-city-mern
    ```bash
    npm run seed
    ```
-   *Seeded demo accounts:*
-   - **Admin**: `admin@smartcity.test` (Password: `Passw0rd!demo`)
-   - **Authority**: `authority@smartcity.test` (Password: `Passw0rd!demo`)
-   - **Citizen**: `citizen@smartcity.test` (Password: `Passw0rd!demo`)
+   *Seeded demo accounts (passwords configured via `SEED_PASSWORD` in your local `.env`, or default dev password):*
+   - **Admin**: `admin@smartcity.test`
+   - **Authority**: `authority@smartcity.test`
+   - **Citizen**: `citizen@smartcity.test`
 
 4. Start the backend development server:
    ```bash
