@@ -198,6 +198,21 @@ export default function Navbar() {
                     🏛️ Public Tenders
                   </button>
 
+                  <button
+                    onClick={() => {
+                      setShowUserPopUp(false);
+                      navigate('/');
+                      setTimeout(() => {
+                        const el = document.getElementById('faq');
+                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                      }, 100);
+                    }}
+                    className="w-full text-left text-xs font-semibold py-2 px-2 hover:text-black text-slate-600 hover:bg-slate-50 rounded-lg cursor-pointer transition flex items-center gap-1.5"
+                  >
+                    <span>📘</span>
+                    <span>Guidelines & FAQs</span>
+                  </button>
+
                   {['admin', 'authority'].includes(user.role) && (
                     <button
                       onClick={() => {

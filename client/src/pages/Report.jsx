@@ -531,6 +531,14 @@ export default function Report() {
                 </div>
               )}
 
+              {/* Civic Integrity & Anti-Fraud Reminder */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/90 text-xs text-slate-700 flex items-start gap-2.5 shadow-2xs">
+                <span className="text-base shrink-0">⚖️</span>
+                <div className="leading-relaxed">
+                  <strong className="font-bold text-slate-900">Civic Integrity Notice:</strong> Submitting fake, prank, or staged complaints is strictly prohibited. Photos are verified by AI vision and on-ground municipal crews. Violations result in automatic account strikes and temporary cooldown suspensions.
+                </div>
+              </div>
+
               {/* Step 1: Photo Evidence */}
             <div>
               <label className="text-sm font-bold text-slate-800 block mb-2">
