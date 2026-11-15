@@ -385,43 +385,49 @@ router.patch('/:id/status', requireRole('authority', 'admin'), asyncHandler(asyn
     update.resolvedAt = null;
 
     // Apply strike to the citizen author unless marked as duplicate
-    if (existing.status !== 'rejected' && existing.user && rejectionCategory !== 'duplicate') {
+    if (existing.user && rejectionCategory !== 'duplicate') {
       const author = await User.findById(existing.user);
       if (author && author.role === 'citizen') {
-        author.strikes = (author.strikes || 0) + 1;
         author.strikeHistory = author.strikeHistory || [];
-        author.strikeHistory.push({
-          reason: rejectionCategory || 'fake_prank',
-          note: rejectionReason || 'Report rejected as false or invalid by municipal authority.',
-          reportId: existing._id,
-          reportTitle: `${existing.category} · ${existing.address?.city || existing.address?.formatted || 'Incident location'}`,
-          createdAt: new Date(),
-          appliedBy: req.user._id,
-          appliedByName: req.user.name,
-        });
+        const alreadyPenalized = author.strikeHistory.some(
+          (s) => s.reportId && String(s.reportId) === String(existing._id)
+        );
 
-        if (author.strikes === 1) {
-          author.status = 'warned';
-        } else if (author.strikes === 2) {
-          author.status = 'suspended';
-          author.suspendedUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7-day cooldown
-        } else if (author.strikes >= 3) {
-          author.status = 'banned';
-          author.isBlocked = true;
-          author.blockReason = 'Indefinite restriction: 3 or more verified false or invalid reports.';
+        if (!alreadyPenalized) {
+          author.strikeHistory.push({
+            reason: rejectionCategory || 'fake_prank',
+            note: rejectionReason || 'Report rejected as false or invalid by municipal authority.',
+            reportId: existing._id,
+            reportTitle: `${existing.category} · ${existing.address?.city || existing.address?.formatted || 'Incident location'}`,
+            createdAt: new Date(),
+            appliedBy: req.user._id,
+            appliedByName: req.user.name,
+          });
+          author.strikes = Math.min(3, Math.max(0, author.strikeHistory.length));
+
+          if (author.strikes === 1) {
+            author.status = 'warned';
+          } else if (author.strikes === 2) {
+            author.status = 'suspended';
+            author.suspendedUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7-day cooldown
+          } else if (author.strikes >= 3) {
+            author.status = 'banned';
+            author.isBlocked = true;
+            author.blockReason = 'Indefinite restriction: 3 verified false or invalid reports.';
+          }
+          await author.save();
         }
-        await author.save();
       }
     }
   } else {
     // If previously rejected, reverse the strike upon changing to an active/investigative status
     if (existing.status === 'rejected' && existing.user && existing.rejectionCategory !== 'duplicate') {
       const author = await User.findById(existing.user);
-      if (author && author.strikes > 0) {
-        author.strikes = Math.max(0, author.strikes - 1);
+      if (author) {
         author.strikeHistory = (author.strikeHistory || []).filter(
           (s) => String(s.reportId) !== String(existing._id)
         );
+        author.strikes = Math.min(3, Math.max(0, author.strikeHistory.length));
         if (author.strikes === 0) {
           author.status = 'active';
           author.isBlocked = false;

@@ -24,23 +24,24 @@ const userSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 userSchema.methods.getRestrictionStatus = function getRestrictionStatus() {
+  const strikeCount = Math.min(3, Math.max(0, this.strikes ?? 0));
+
   if (this.isBlocked) {
     return {
       isRestricted: true,
       status: 'banned',
       reason: this.blockReason || 'Account manually restricted by administration.',
-      strikes: this.strikes ?? 0,
+      strikes: strikeCount,
       suspendedUntil: null,
     };
   }
 
-  const strikeCount = this.strikes ?? 0;
   if (this.status === 'banned' || strikeCount >= 3) {
     return {
       isRestricted: true,
       status: 'banned',
-      reason: this.blockReason || 'Account indefinitely restricted due to 3 or more verified false/invalid reports.',
-      strikes: strikeCount,
+      reason: this.blockReason || 'Account indefinitely restricted due to 3 verified false/invalid reports.',
+      strikes: 3,
       suspendedUntil: null,
     };
   }
@@ -85,13 +86,13 @@ userSchema.methods.getRestrictionStatus = function getRestrictionStatus() {
 };
 
 userSchema.methods.toPublic = function toPublic() {
-  const r = this.getRestrictionStatus ? this.getRestrictionStatus() : { isRestricted: false, status: this.status || 'active', strikes: this.strikes || 0 };
+  const r = this.getRestrictionStatus ? this.getRestrictionStatus() : { isRestricted: false, status: this.status || 'active', strikes: Math.min(3, this.strikes || 0) };
   return {
     id: String(this._id),
     name: this.name,
     email: this.email,
     role: this.role,
-    strikes: this.strikes ?? 0,
+    strikes: Math.min(3, Math.max(0, this.strikes ?? 0)),
     status: r.status,
     isRestricted: r.isRestricted,
     restrictionReason: r.reason,

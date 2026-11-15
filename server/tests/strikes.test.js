@@ -53,18 +53,21 @@ test('citizen with 2 strikes whose cooldown expired is restored to non-restricte
   assert.equal(status.status, 'warned');
 });
 
-test('citizen with 3+ strikes is banned and restricted indefinitely', () => {
+test('citizen with 3+ strikes is banned and restricted indefinitely, and strikes clamp to 3', () => {
   const u = new User({
     name: 'Eve',
     email: 'eve@test.com',
     passwordHash: 'hash',
     role: 'citizen',
-    strikes: 3,
+    strikes: 4,
     status: 'banned',
   });
   const status = u.getRestrictionStatus();
   assert.equal(status.isRestricted, true);
   assert.equal(status.status, 'banned');
+  assert.equal(status.strikes, 3);
+  const pub = u.toPublic();
+  assert.equal(pub.strikes, 3);
 });
 
 test('manually blocked user is restricted regardless of strikes', () => {

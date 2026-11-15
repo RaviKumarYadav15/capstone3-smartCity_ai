@@ -404,7 +404,7 @@ export default function Admin() {
 
                     <div className="text-xs text-slate-600 space-y-1">
                       <div>
-                        Strikes accumulated: <strong className="text-slate-800 font-mono font-bold">{u.strikes || 0} / 3</strong>
+                        Strikes accumulated: <strong className="text-slate-800 font-mono font-bold">{Math.min(3, u.strikes || 0)} / 3</strong>
                       </div>
                       {u.suspendedUntil && u.status === 'suspended' && (
                         <div className="text-amber-800 text-[11px] font-medium">

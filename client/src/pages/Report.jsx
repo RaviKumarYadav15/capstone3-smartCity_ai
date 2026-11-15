@@ -478,7 +478,7 @@ export default function Report() {
               {user.strikeHistory && user.strikeHistory.length > 0 && (
                 <div className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 mb-6 text-left">
                   <div className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 flex justify-between items-center">
-                    <span>Recorded Strikes ({user.strikes || user.strikeHistory.length}/3):</span>
+                    <span>Recorded Strikes ({Math.min(3, user.strikes || user.strikeHistory?.length || 0)}/3):</span>
                     <span className="text-[10px] text-red-600 font-semibold">Policy: 2 = 7d Cooldown, 3 = Ban</span>
                   </div>
                   <div className="space-y-2 max-h-48 overflow-y-auto pr-1">

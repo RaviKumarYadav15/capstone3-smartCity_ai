@@ -153,7 +153,7 @@ export default function Navbar() {
                       {user.role === 'citizen' && (
                         user.isRestricted ? (
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200">
-                            {user.status === 'suspended' ? '🟠 Suspended' : '🔴 Restricted'} ({user.strikes || 0}/3)
+                            {user.status === 'suspended' ? '🟠 Suspended' : '🔴 Restricted'} ({Math.min(3, user.strikes || 0)}/3)
                           </span>
                         ) : user.status === 'warned' ? (
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
