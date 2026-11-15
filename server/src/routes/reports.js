@@ -279,16 +279,25 @@ router.put('/:id/letter', requireAuth, asyncHandler(async (req, res) => {
   res.json({ letter: report.complaintLetter });
 }));
 
-// One vote per user, switchable; atomic update operators, no read-modify-write race.
+// One vote per user, toggleable and switchable; atomic update operators, no read-modify-write race.
 router.post('/:id/vote', requireAuth, asyncHandler(async (req, res) => {
   const { type } = z.object({ type: z.enum(['up', 'down']) }).parse(req.body);
   const _id = req.params.id;
   const uid = req.user._id;
-  const changed = await Report.updateOne({ _id, 'votes.user': uid }, { $set: { 'votes.$.type': type } });
-  if (!changed.matchedCount) {
-    const added = await Report.updateOne({ _id, 'votes.user': { $ne: uid } }, { $push: { votes: { user: uid, type } } });
+
+  const existing = await Report.findOne({ _id, 'votes.user': uid }, { 'votes.$': 1 });
+  if (existing?.votes?.length && existing.votes[0].type === type) {
+    // Clicking the same reaction again toggles it off (retracts vote)
+    await Report.updateOne({ _id }, { $pull: { votes: { user: uid } } });
+  } else if (existing?.votes?.length) {
+    // Switch between up and down votes
+    await Report.updateOne({ _id, 'votes.user': uid }, { $set: { 'votes.$.type': type } });
+  } else {
+    // New vote
+    const added = await Report.updateOne({ _id }, { $push: { votes: { user: uid, type } } });
     if (!added.matchedCount) throw new HttpError(404, 'Report not found');
   }
+
   const report = await Report.findById(_id);
   const up = report.votes.filter((v) => v.type === 'up').length;
   if (up >= 5 && report.status === 'reported') { report.status = 'under_review'; await report.save(); }

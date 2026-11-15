@@ -40,6 +40,15 @@ export default function ReportCard({ report: r, onChange, onLocate }) {
     try {
       const res = await api.post(`/reports/${r.id}/${path}`, body);
       onChange(res.report);
+      if (path === 'vote') {
+        if (!res.report.myVote) {
+          toast.success('Reaction removed');
+        } else if (res.report.myVote === 'up') {
+          toast.success('Upvoted issue priority');
+        } else {
+          toast.success('Downvoted issue priority');
+        }
+      }
     } catch (e) {
       toast(e.message);
     }
@@ -143,7 +152,7 @@ export default function ReportCard({ report: r, onChange, onLocate }) {
                   : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
               }`}
               onClick={() => act('vote', { type: 'up' })}
-              title="Upvote priority"
+              title={r.myVote === 'up' ? 'Click again to remove your upvote' : 'Upvote priority'}
             >
               👍 {r.upvotes}
             </button>
@@ -154,7 +163,7 @@ export default function ReportCard({ report: r, onChange, onLocate }) {
                   : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
               }`}
               onClick={() => act('vote', { type: 'down' })}
-              title="Downvote"
+              title={r.myVote === 'down' ? 'Click again to remove your downvote' : 'Downvote'}
             >
               👎 {r.downvotes}
             </button>
