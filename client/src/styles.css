@@ -298,6 +298,12 @@ label.inline select { width: auto; }
   isolation: isolate;
 }
 
+.map .leaflet-top.leaflet-left {
+  top: auto !important;
+  bottom: 24px !important;
+  left: 12px !important;
+}
+
 .map {
   height: 440px;
   border-radius: var(--radius);

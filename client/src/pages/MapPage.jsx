@@ -231,21 +231,25 @@ export default function MapPage() {
 
   const visible = reportsInCity.filter((r) => {
     if (filter === 'all') return true;
+    if (filter === 'active' || filter === 'unresolved') return r.status !== 'resolved';
+    if (filter === 'resolved') return r.status === 'resolved';
     if (filter === 'critical') return r.severity === 'critical' && r.status !== 'resolved';
     if (filter === 'high') return r.severity === 'high' && r.status !== 'resolved';
     if (filter === 'medium') return r.severity === 'medium' && r.status !== 'resolved';
     if (filter === 'low') return r.severity === 'low' && r.status !== 'resolved';
     if (filter === 'new') return r.status === 'reported';
-    if (filter === 'resolved') return r.status === 'resolved';
-    if (filter === r.category) return true;
+    if (filter === r.category) return r.status !== 'resolved';
     return r.status === filter || r.severity === filter;
   });
 
   const counts = {
     all: reportsInCity.length,
     active: reportsInCity.filter((r) => r.status !== 'resolved').length,
+    unresolved: reportsInCity.filter((r) => r.status !== 'resolved').length,
     critical: reportsInCity.filter((r) => r.severity === 'critical' && r.status !== 'resolved').length,
     high: reportsInCity.filter((r) => r.severity === 'high' && r.status !== 'resolved').length,
+    medium: reportsInCity.filter((r) => r.severity === 'medium' && r.status !== 'resolved').length,
+    low: reportsInCity.filter((r) => r.severity === 'low' && r.status !== 'resolved').length,
     new: reportsInCity.filter((r) => r.status === 'reported').length,
     resolved: reportsInCity.filter((r) => r.status === 'resolved').length,
   };
@@ -396,6 +400,109 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
           <div id="live-incident-map" className="lg:col-span-7 xl:col-span-8 flex flex-col justify-between h-full">
             {/* Map Frame with Controls Floated Directly ON the Map (isolated stacking context, z-[10]) */}
             <div className="relative rounded-2xl overflow-hidden border border-slate-200 w-full flex-1 min-h-[380px] sm:min-h-[420px] isolate">
+              {/* Left Top: Vertical Alignment for Unresolved & Resolved Controls */}
+              <div className="absolute top-3 left-3 z-[10] flex flex-col gap-1.5 max-w-[190px] sm:max-w-[240px]">
+                {/* Unresolved Control with Dropdown */}
+                <div
+                  className={`rounded-xl border shadow-md backdrop-blur-md transition-all flex items-center overflow-hidden ${
+                    filter === 'active' || filter === 'unresolved' || ['critical', 'high', 'medium', 'low', ...categoryStats.map((c) => c.category)].includes(filter)
+                      ? 'bg-amber-500 text-white border-amber-600 ring-2 ring-amber-400/40 shadow-amber-500/20'
+                      : 'bg-white/95 text-slate-800 border-slate-200/90 hover:bg-white'
+                  }`}
+                >
+                  {/* Direct click button to show all Unresolved */}
+                  <button
+                    type="button"
+                    onClick={() => setFilter((prev) => (prev === 'active' || prev === 'unresolved' ? 'all' : 'active'))}
+                    className={`py-1.5 pl-2.5 pr-1.5 text-xs font-bold flex items-center gap-1 cursor-pointer truncate ${
+                      filter === 'active' || filter === 'unresolved' || ['critical', 'high', 'medium', 'low', ...categoryStats.map((c) => c.category)].includes(filter)
+                        ? 'text-white'
+                        : 'text-slate-800'
+                    }`}
+                    title={filter === 'active' ? 'Click to reset filter' : 'Click to show all Unresolved issues'}
+                  >
+                    <span>⚠️</span>
+                    <span className="truncate">Unresolved ({counts.active})</span>
+                  </button>
+
+                  {/* Dropdown selector for all criticalities and categories */}
+                  <select
+                    value={
+                      ['critical', 'high', 'medium', 'low', ...categoryStats.map((c) => c.category)].includes(filter)
+                        ? filter
+                        : filter === 'active' || filter === 'unresolved'
+                        ? 'active'
+                        : ''
+                    }
+                    onChange={(e) => {
+                      if (e.target.value) setFilter(e.target.value);
+                    }}
+                    aria-label="Filter Unresolved issues"
+                    className={`text-xs font-semibold py-1.5 pr-2 pl-0.5 border-l cursor-pointer focus:outline-none transition ${
+                      filter === 'active' || filter === 'unresolved' || ['critical', 'high', 'medium', 'low', ...categoryStats.map((c) => c.category)].includes(filter)
+                        ? 'bg-amber-600/50 text-white border-amber-400/40 hover:bg-amber-600/70'
+                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                    }`}
+                    title="Filter Unresolved by Criticality or Category"
+                  >
+                    <option value="active" className="text-slate-800 bg-white">
+                      All Unresolved ({counts.active})
+                    </option>
+                    <option disabled className="text-slate-400 bg-white font-bold text-[10px]">
+                      ── Criticality ──
+                    </option>
+                    <option value="critical" className="text-slate-800 bg-white">
+                      🔴 Critical ({severityStats.critical})
+                    </option>
+                    <option value="high" className="text-slate-800 bg-white">
+                      🟠 High ({severityStats.high})
+                    </option>
+                    <option value="medium" className="text-slate-800 bg-white">
+                      🟡 Medium ({severityStats.medium})
+                    </option>
+                    <option value="low" className="text-slate-800 bg-white">
+                      🟢 Low ({severityStats.low})
+                    </option>
+                    {categoryStats.length > 0 && (
+                      <>
+                        <option disabled className="text-slate-400 bg-white font-bold text-[10px]">
+                          ── Categories ──
+                        </option>
+                        {categoryStats.map((c) => (
+                          <option key={c.category} value={c.category} className="text-slate-800 bg-white">
+                            {EMOJI[c.category] || '⚠️'} {c.category} ({c.active})
+                          </option>
+                        ))}
+                      </>
+                    )}
+                  </select>
+                </div>
+
+                {/* Resolved Control */}
+                <button
+                  type="button"
+                  onClick={() => setFilter((prev) => (prev === 'resolved' ? 'all' : 'resolved'))}
+                  className={`py-1.5 px-2.5 rounded-xl text-xs font-bold border shadow-md backdrop-blur-md transition-all cursor-pointer flex items-center justify-between gap-1.5 ${
+                    filter === 'resolved'
+                      ? 'bg-emerald-600 text-white border-emerald-700 ring-2 ring-emerald-400/40 shadow-emerald-600/20'
+                      : 'bg-white/95 text-slate-800 border-slate-200/90 hover:bg-white'
+                  }`}
+                  title={filter === 'resolved' ? 'Click to reset filter' : 'Click to show only Resolved issues on the map'}
+                >
+                  <span className="flex items-center gap-1">
+                    <span>🟢</span>
+                    <span>Resolved</span>
+                  </span>
+                  <span
+                    className={`text-[11px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
+                      filter === 'resolved' ? 'bg-white/25 text-white' : 'bg-emerald-100 text-emerald-800'
+                    }`}
+                  >
+                    {counts.resolved}
+                  </span>
+                </button>
+              </div>
+
               {/* Floating Controls Directly ON the Map: Locate, Layer & Visible Count (Horizontal Single Row) */}
               <div className="absolute top-3 right-3 z-[10] flex items-center gap-2 flex-nowrap max-w-[calc(100%-60px)]">
                 {/* Locate 5km Around Me Button ON TOP OF MAP */}
@@ -493,7 +600,7 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
                 </p>
               </div>
 
-              {/* Criticality Breakdown */}
+              {/* Criticality Breakdown (Informational Badges) */}
               <div className="mb-3.5">
                 <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 flex items-center justify-between">
                   <span>Criticality Breakdown:</span>
@@ -508,61 +615,37 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
                   )}
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setFilter((prev) => (prev === 'critical' ? 'all' : 'critical'))}
-                    className={`px-2 py-1.5 rounded-xl font-bold text-xs flex items-center justify-between border cursor-pointer transition ${
-                      filter === 'critical'
-                        ? 'bg-red-600 text-white border-red-700 shadow-xs'
-                        : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
-                    }`}
-                    title="Filter Critical Hazards"
+                  <div
+                    className="px-2 py-1.5 rounded-xl font-bold text-xs flex items-center justify-between border bg-red-50 text-red-700 border-red-200 select-none cursor-default"
+                    title="Critical Hazards (Immediate safety danger)"
                   >
                     <span className="flex items-center gap-1">🔴 Crit</span>
                     <span className="font-mono text-xs">{severityStats.critical}</span>
-                  </button>
+                  </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setFilter((prev) => (prev === 'high' ? 'all' : 'high'))}
-                    className={`px-2 py-1.5 rounded-xl font-bold text-xs flex items-center justify-between border cursor-pointer transition ${
-                      filter === 'high'
-                        ? 'bg-amber-600 text-white border-amber-700 shadow-xs'
-                        : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
-                    }`}
-                    title="Filter High Priority"
+                  <div
+                    className="px-2 py-1.5 rounded-xl font-bold text-xs flex items-center justify-between border bg-amber-50 text-amber-800 border-amber-200 select-none cursor-default"
+                    title="High Priority"
                   >
                     <span className="flex items-center gap-1">🟠 High</span>
                     <span className="font-mono text-xs">{severityStats.high}</span>
-                  </button>
+                  </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setFilter((prev) => (prev === 'medium' ? 'all' : 'medium'))}
-                    className={`px-2 py-1.5 rounded-xl font-bold text-xs flex items-center justify-between border cursor-pointer transition ${
-                      filter === 'medium'
-                        ? 'bg-yellow-500 text-white border-yellow-600 shadow-xs'
-                        : 'bg-yellow-50 text-yellow-800 border-yellow-200 hover:bg-yellow-100'
-                    }`}
-                    title="Filter Medium Priority"
+                  <div
+                    className="px-2 py-1.5 rounded-xl font-bold text-xs flex items-center justify-between border bg-yellow-50 text-yellow-800 border-yellow-200 select-none cursor-default"
+                    title="Medium Priority"
                   >
                     <span className="flex items-center gap-1">🟡 Med</span>
                     <span className="font-mono text-xs">{severityStats.medium}</span>
-                  </button>
+                  </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setFilter((prev) => (prev === 'low' ? 'all' : 'low'))}
-                    className={`px-2 py-1.5 rounded-xl font-bold text-xs flex items-center justify-between border cursor-pointer transition ${
-                      filter === 'low'
-                        ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs'
-                        : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
-                    }`}
-                    title="Filter Low Priority"
+                  <div
+                    className="px-2 py-1.5 rounded-xl font-bold text-xs flex items-center justify-between border bg-emerald-50 text-emerald-800 border-emerald-200 select-none cursor-default"
+                    title="Low Priority"
                   >
                     <span className="flex items-center gap-1">🟢 Low</span>
                     <span className="font-mono text-xs">{severityStats.low}</span>
-                  </button>
+                  </div>
                 </div>
               </div>
 
