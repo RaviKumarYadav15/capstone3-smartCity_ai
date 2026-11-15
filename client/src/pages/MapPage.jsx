@@ -48,6 +48,7 @@ export default function MapPage() {
   const [cityZoom, setCityZoom] = useState(13);
 
   // Interactive features states
+  const [showGuideModal, setShowGuideModal] = useState(false);
   const [showGrievanceModal, setShowGrievanceModal] = useState(false);
   const [copiedLetter, setCopiedLetter] = useState(false);
 
@@ -340,8 +341,8 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
 
   return (
     <>
-      {/* Top City Selector (Above the Dashboard & Heading) */}
-      <div className="flex justify-end mb-4">
+      {/* Top Scope Bar: City Selector & Interactive Guide Button */}
+      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
         <select
           value={selectedCity}
           onChange={(e) => handleCityChange(e.target.value)}
@@ -355,135 +356,133 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
             </option>
           ))}
         </select>
+
+        {/* Pulsing GUIDE Button */}
+        <button
+          type="button"
+          onClick={() => setShowGuideModal(true)}
+          className="text-xs sm:text-sm font-black py-2 px-4 rounded-full border border-blue-300 bg-white hover:bg-blue-50 text-blue-700 cursor-pointer shadow-xs transition-all flex items-center gap-2 select-none"
+          title="Open Citizen SOP & Interactive Map Guide"
+        >
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-600"></span>
+          </span>
+          GUIDE
+        </button>
       </div>
 
-      {/* Top 2-Column Section: Map on Left, Two Status Rows on Right */}
-      <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        {/* Left Column: City Issues Map */}
-        <div id="live-incident-map" className="lg:col-span-7 xl:col-span-8 bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col justify-between">
-          {/* Header Row: Clean Title on Left, Count Badge on Right (City selector moved to Top Scope Bar) */}
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-            <div>
-              <h1 className="text-xl sm:text-2xl font-black text-slate-900 m-0">City Issues Map</h1>
-              <p className="text-xs text-slate-500 m-0 mt-0.5">Real-time public incident, hazard & infrastructure tracking</p>
+      {/* Unified Map & Issues Breakdown Container on the Same Horizontal Level */}
+      <section className="bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-sm">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+          {/* Left Side: Map Column */}
+          <div id="live-incident-map" className="lg:col-span-7 xl:col-span-8 flex flex-col justify-between">
+            {/* Header: Title on Left, Locate Me and Layer on Top of the Map! */}
+            <div className="flex flex-wrap items-center justify-between gap-2.5 mb-3">
+              <div>
+                <h1 className="text-xl sm:text-2xl font-black text-slate-900 m-0">City Issues Map</h1>
+                <p className="text-xs text-slate-500 m-0 mt-0.5">Real-time public incident, hazard & infrastructure tracking</p>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Locate 5km Around Me Button ON TOP OF MAP */}
+                <button
+                  type="button"
+                  onClick={handleLocateToggle}
+                  disabled={locatingUser}
+                  title={isNearby5km ? 'Click to reset back to full view' : 'Locate 5km Around Me'}
+                  aria-label="Locate 5km Around Me"
+                  className={`transition-all cursor-pointer flex items-center gap-1.5 py-1.5 px-3.5 rounded-full text-xs font-bold border select-none ${
+                    isNearby5km
+                      ? 'bg-blue-600 text-white border-blue-700 shadow-xs'
+                      : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-300 shadow-2xs'
+                  }`}
+                >
+                  {locatingUser ? (
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin"></span>
+                      <span>Locating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <BiCurrentLocation className={`text-base ${isNearby5km ? 'text-white animate-pulse' : 'text-blue-600'}`} />
+                      <span>Locate 5km Around Me</span>
+                      {isNearby5km && nearby5kmCount > 0 && (
+                        <span className="bg-white/25 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">
+                          {nearby5kmCount}
+                        </span>
+                      )}
+                    </>
+                  )}
+                </button>
+
+                {/* Layer selector */}
+                <select
+                  value={layer}
+                  onChange={(e) => setLayer(e.target.value)}
+                  aria-label="Map Tile Style"
+                  className="text-xs font-semibold py-1.5 px-2.5 rounded-xl border border-slate-300 bg-white text-slate-700 cursor-pointer shadow-2xs hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                >
+                  {Object.entries(LAYERS).map(([k, v]) => (
+                    <option key={k} value={k}>
+                      {v.name}
+                    </option>
+                  ))}
+                </select>
+
+                <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-1.5 rounded-full border border-slate-200">
+                  {visible.length} visible
+                </span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                {visible.length} issues visible
+
+            {error && <p className="error p-3 rounded-xl bg-red-50 border border-red-200 my-2 text-xs">{error}</p>}
+
+            {/* Map Frame */}
+            <div className="relative rounded-2xl overflow-hidden border border-slate-200 flex-1 min-h-[380px] sm:min-h-[460px] isolate">
+              <ReportsMap
+                reports={visible}
+                layer={layer}
+                targetLocation={targetLocation}
+                targetId={targetId}
+                centerLocation={cityCenter}
+                userLocation={userLocation}
+                isNearby5km={isNearby5km}
+                zoom={cityZoom}
+                fitBoundsCoords={fitBoundsCoords}
+              />
+            </div>
+
+            <div className="flex items-center justify-between text-xs text-slate-500 mt-2.5 px-1 flex-wrap gap-2">
+              <span>
+                {isNearby5km && userLocation
+                  ? `Showing ${reportsInCity.length} civic reports within 5 km of your GPS location`
+                  : selectedCity === 'all'
+                  ? `Showing all ${reports.length} civic reports across all regions`
+                  : `Showing ${reportsInCity.length} reports in ${selectedCity}`}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Live feed (auto-updates every 30s)
               </span>
             </div>
           </div>
 
-          {error && <p className="error p-3 rounded-xl bg-red-50 border border-red-200 my-2 text-xs">{error}</p>}
-          
-          {/* Map Frame with Floating Map Controls (isolated stacking context) */}
-          <div className="relative rounded-2xl overflow-hidden border border-slate-200 flex-1 min-h-[380px] sm:min-h-[440px] isolate">
-            {/* Top Right Floating Map Style Dropdown on the Map Itself */}
-            <div className="absolute top-3 right-3 z-[30]">
-              <select
-                value={layer}
-                onChange={(e) => setLayer(e.target.value)}
-                aria-label="Map Tile Style"
-                className="text-xs font-semibold py-1.5 px-3 rounded-xl border border-slate-200/90 bg-white/95 backdrop-blur-md text-slate-700 cursor-pointer shadow-md hover:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition"
-              >
-                {Object.entries(LAYERS).map(([k, v]) => (
-                  <option key={k} value={k}>
-                    {v.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <ReportsMap
-              reports={visible}
-              layer={layer}
-              targetLocation={targetLocation}
-              targetId={targetId}
-              centerLocation={cityCenter}
-              userLocation={userLocation}
-              isNearby5km={isNearby5km}
-              zoom={cityZoom}
-              fitBoundsCoords={fitBoundsCoords}
-            />
-
-            {/* Floating 3D Locate 5km Around Me Button on Map */}
-            <div className="absolute bottom-5 right-5 z-[30]">
-              <button
-                type="button"
-                onClick={handleLocateToggle}
-                disabled={locatingUser}
-                title={isNearby5km ? 'Click to reset back to full view' : 'Locate 5km Around Me'}
-                aria-label="Locate 5km Around Me"
-                className={`transition-all cursor-pointer flex items-center gap-2 select-none px-4 py-2.5 sm:px-5 sm:py-3 rounded-full ${
-                  isNearby5km
-                    ? 'bg-gradient-to-b from-blue-500 to-blue-600 text-white border-2 border-blue-400 shadow-[0_6px_0_#1d4ed8,0_12px_22px_rgba(37,99,235,0.35)] active:translate-y-1 active:shadow-[0_2px_0_#1d4ed8,0_4px_10px_rgba(37,99,235,0.3)]'
-                    : 'bg-gradient-to-b from-white via-slate-50 to-slate-100 text-slate-800 border-2 border-slate-300 shadow-[0_6px_0_#94a3b8,0_12px_22px_rgba(0,0,0,0.2)] active:translate-y-1 active:shadow-[0_2px_0_#94a3b8,0_4px_10px_rgba(0,0,0,0.15)] hover:from-white hover:to-blue-50'
-                }`}
-              >
-                {locatingUser ? (
-                  <>
-                    <span className="w-4 h-4 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin"></span>
-                    <span className="font-extrabold text-xs sm:text-sm">Locating...</span>
-                  </>
-                ) : (
-                  <>
-                    <BiCurrentLocation
-                      className={`text-xl sm:text-2xl transition-transform ${
-                        isNearby5km ? 'text-white animate-pulse' : 'text-blue-600 group-hover:scale-110'
-                      }`}
-                    />
-                    <span
-                      className={`font-extrabold text-xs sm:text-sm tracking-tight ${
-                        isNearby5km ? 'text-white' : 'text-slate-800'
-                      }`}
-                    >
-                      Locate 5km Around Me
-                    </span>
-                    {isNearby5km && nearby5kmCount > 0 && (
-                      <span className="bg-white/25 text-white text-[11px] font-black px-2 py-0.5 rounded-full ml-0.5">
-                        {nearby5kmCount}
-                      </span>
-                    )}
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between text-xs text-slate-500 mt-3 px-1 flex-wrap gap-2">
-            <span>
-              {isNearby5km && userLocation
-                ? `Showing ${reportsInCity.length} civic reports within 5 km of your GPS location`
-                : selectedCity === 'all'
-                ? `Showing all ${reports.length} civic reports across all regions`
-                : `Showing ${reportsInCity.length} reports in ${selectedCity}`}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Live feed (auto-updates every 30s)
-            </span>
-          </div>
-        </div>
-
-        {/* Right Column: Two Rows Showing Live Status of the City */}
-        <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-6 justify-between">
-          {/* Row 1: Area Incident Breakdown (Category-wise & Criticality-wise) */}
-          <div className="bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-sm flex-1 flex flex-col justify-between">
+          {/* Right Side: Issues Breakdown Column */}
+          <div className="lg:col-span-5 xl:col-span-4 border-t lg:border-t-0 lg:border-l border-slate-100 lg:pl-6 flex flex-col justify-between">
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-base sm:text-lg font-bold text-slate-900 m-0">
+              <div className="mb-3">
+                <h2 className="text-lg font-bold text-slate-900 m-0">
                   {isNearby5km
-                    ? 'Nearby Incident Breakdown'
+                    ? 'Nearby Issues Breakdown'
                     : selectedCity !== 'all'
-                    ? `${selectedCity} Incident Breakdown`
-                    : 'Area Incident Breakdown'}
+                    ? `${selectedCity} Issues Breakdown`
+                    : 'Issues Breakdown'}
                 </h2>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200">
-                  {counts.all} Total ({counts.active} Open)
-                </span>
+                <p className="text-xs text-slate-500 m-0 mt-0.5">
+                  {counts.all} Total Registered ({counts.active} Open · {counts.resolved} Resolved)
+                </p>
               </div>
 
-              {/* Criticality / Severity Filter Row */}
+              {/* Criticality Breakdown */}
               <div className="mb-3.5">
                 <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 flex items-center justify-between">
                   <span>Criticality Breakdown:</span>
@@ -500,10 +499,7 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                   <button
                     type="button"
-                    onClick={() => {
-                      setFilter((prev) => (prev === 'critical' ? 'all' : 'critical'));
-                      document.getElementById('live-incident-map')?.scrollIntoView({ behavior: 'smooth' });
-                    }}
+                    onClick={() => setFilter((prev) => (prev === 'critical' ? 'all' : 'critical'))}
                     className={`px-2 py-1.5 rounded-xl font-bold text-xs flex items-center justify-between border cursor-pointer transition ${
                       filter === 'critical'
                         ? 'bg-red-600 text-white border-red-700 shadow-xs'
@@ -517,10 +513,7 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
 
                   <button
                     type="button"
-                    onClick={() => {
-                      setFilter((prev) => (prev === 'high' ? 'all' : 'high'));
-                      document.getElementById('live-incident-map')?.scrollIntoView({ behavior: 'smooth' });
-                    }}
+                    onClick={() => setFilter((prev) => (prev === 'high' ? 'all' : 'high'))}
                     className={`px-2 py-1.5 rounded-xl font-bold text-xs flex items-center justify-between border cursor-pointer transition ${
                       filter === 'high'
                         ? 'bg-amber-600 text-white border-amber-700 shadow-xs'
@@ -534,10 +527,7 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
 
                   <button
                     type="button"
-                    onClick={() => {
-                      setFilter((prev) => (prev === 'medium' ? 'all' : 'medium'));
-                      document.getElementById('live-incident-map')?.scrollIntoView({ behavior: 'smooth' });
-                    }}
+                    onClick={() => setFilter((prev) => (prev === 'medium' ? 'all' : 'medium'))}
                     className={`px-2 py-1.5 rounded-xl font-bold text-xs flex items-center justify-between border cursor-pointer transition ${
                       filter === 'medium'
                         ? 'bg-yellow-500 text-white border-yellow-600 shadow-xs'
@@ -551,10 +541,7 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
 
                   <button
                     type="button"
-                    onClick={() => {
-                      setFilter((prev) => (prev === 'low' ? 'all' : 'low'));
-                      document.getElementById('live-incident-map')?.scrollIntoView({ behavior: 'smooth' });
-                    }}
+                    onClick={() => setFilter((prev) => (prev === 'low' ? 'all' : 'low'))}
                     className={`px-2 py-1.5 rounded-xl font-bold text-xs flex items-center justify-between border cursor-pointer transition ${
                       filter === 'low'
                         ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs'
@@ -568,7 +555,7 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
                 </div>
               </div>
 
-              {/* Category-wise Breakdown Table */}
+              {/* Category Breakdown Table */}
               <div>
                 <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 flex items-center justify-between">
                   <span>Category Breakdown:</span>
@@ -577,14 +564,14 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
                 {categoryStats.length === 0 ? (
                   <p className="text-xs text-slate-400 italic py-2">No reports recorded in this area yet.</p>
                 ) : (
-                  <div className="overflow-x-auto max-h-48 overflow-y-auto border border-slate-100 rounded-xl">
+                  <div className="overflow-x-auto max-h-[290px] overflow-y-auto border border-slate-100 rounded-xl">
                     <table className="w-full text-xs text-left">
                       <thead className="text-[10px] uppercase font-bold text-slate-500 bg-slate-50 border-b border-slate-100 sticky top-0">
                         <tr>
-                          <th className="py-1.5 px-2.5">Category</th>
-                          <th className="py-1.5 px-2 text-center text-amber-700">Open</th>
-                          <th className="py-1.5 px-2 text-center text-emerald-700">Resolved</th>
-                          <th className="py-1.5 px-2 text-right">Total</th>
+                          <th className="py-2 px-2.5">Category</th>
+                          <th className="py-2 px-2 text-center text-amber-700">Open</th>
+                          <th className="py-2 px-2 text-center text-emerald-700">Resolved</th>
+                          <th className="py-2 px-2 text-right">Total</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
@@ -593,21 +580,18 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
                           return (
                             <tr
                               key={c.category}
-                              onClick={() => {
-                                setFilter((prev) => (prev === c.category ? 'all' : c.category));
-                                document.getElementById('live-incident-map')?.scrollIntoView({ behavior: 'smooth' });
-                              }}
+                              onClick={() => setFilter((prev) => (prev === c.category ? 'all' : c.category))}
                               className={`cursor-pointer transition-colors ${
                                 isSelected ? 'bg-blue-50/80 font-bold' : 'hover:bg-slate-50'
                               }`}
                             >
-                              <td className="py-1.5 px-2.5 flex items-center gap-1.5 truncate max-w-[150px]">
+                              <td className="py-2 px-2.5 flex items-center gap-1.5 truncate max-w-[150px]">
                                 <span>{EMOJI[c.category] || '⚠️'}</span>
                                 <span className="truncate">{c.category}</span>
                               </td>
-                              <td className="py-1.5 px-2 text-center font-mono font-semibold text-amber-700">{c.active}</td>
-                              <td className="py-1.5 px-2 text-center font-mono font-semibold text-emerald-700">{c.resolved}</td>
-                              <td className="py-1.5 px-2 text-right font-mono font-bold text-slate-800">{c.total}</td>
+                              <td className="py-2 px-2 text-center font-mono font-semibold text-amber-700">{c.active}</td>
+                              <td className="py-2 px-2 text-center font-mono font-semibold text-emerald-700">{c.resolved}</td>
+                              <td className="py-2 px-2 text-right font-mono font-bold text-slate-800">{c.total}</td>
                             </tr>
                           );
                         })}
@@ -621,93 +605,6 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
             <div className="pt-2.5 border-t border-slate-100 mt-3 flex items-center justify-between text-xs text-slate-500">
               <span>Active reports: <strong className="text-slate-800">{counts.active}</strong></span>
               <span>Critical hazards: <strong className="text-red-600">{severityStats.critical}</strong></span>
-            </div>
-          </div>
-
-          {/* Row 2: Interactive Map Guide (Legend & SOP) */}
-          <div className="bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-sm flex-1 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-2.5">
-                <h2 className="text-base sm:text-lg font-bold text-slate-900 m-0 flex items-center gap-2">
-                  <span>🗺️</span> Interactive Map Guide
-                </h2>
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 uppercase tracking-wider">
-                  Citizen SOP
-                </span>
-              </div>
-
-              {/* Map Significance (Visual Legend) */}
-              <div className="mb-3">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-                  Map Significance (Visual Legend):
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs text-slate-700">
-                  <div className="flex items-start gap-1.5 p-1.5 rounded-lg bg-red-50/60 border border-red-100">
-                    <span className="text-sm shrink-0">🔴</span>
-                    <div className="leading-snug">
-                      <strong className="text-red-700">Critical:</strong> Immediate hazard (open manhole, live wire, collapsed road).
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-1.5 p-1.5 rounded-lg bg-amber-50/60 border border-amber-100">
-                    <span className="text-sm shrink-0">🟠</span>
-                    <div className="leading-snug">
-                      <strong className="text-amber-800">High / Moderate:</strong> Severe defect needing maintenance.
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-1.5 p-1.5 rounded-lg bg-blue-50/60 border border-blue-100">
-                    <span className="text-sm shrink-0">🔵</span>
-                    <div className="leading-snug">
-                      <strong className="text-blue-700">Verified:</strong> Authenticated by 3 citizens within 250m.
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-1.5 p-1.5 rounded-lg bg-emerald-50/60 border border-emerald-100">
-                    <span className="text-sm shrink-0">🟢</span>
-                    <div className="leading-snug">
-                      <strong className="text-emerald-700">Resolved:</strong> Municipal repair completed and closed.
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* 3-Step Civic SOP */}
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-                  3-Step Civic SOP (How to use this page):
-                </p>
-                <div className="flex flex-col gap-1.5 text-xs text-slate-700">
-                  <div className="flex items-start gap-2 p-1.5 rounded-lg bg-slate-50 border border-slate-100">
-                    <span className="font-bold text-blue-600 font-mono shrink-0">1.</span>
-                    <div>
-                      <strong>Locate:</strong> Select your city dropdown or click <em>"Locate 5km Around Me"</em> on the map.
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2 p-1.5 rounded-lg bg-slate-50 border border-slate-100">
-                    <span className="font-bold text-blue-600 font-mono shrink-0">2.</span>
-                    <div>
-                      <strong>Eyewitness Verify:</strong> Walk near an open issue (&lt; 250m) and click <em>Verify</em> to authenticate it for fast authority routing.
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2 p-1.5 rounded-lg bg-slate-50 border border-slate-100">
-                    <span className="font-bold text-blue-600 font-mono shrink-0">3.</span>
-                    <div>
-                      <strong>Escalate:</strong> If an issue remains stagnant, click <em>Draft Grievance Letter</em> to auto-generate a formal complaint to municipal heads.
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Retained Action Buttons */}
-            <div className="mt-3.5 pt-3 border-t border-slate-100 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setShowGrievanceModal(true)}
-                className="w-full text-xs font-bold py-2.5 px-4 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 flex items-center justify-center gap-2 cursor-pointer transition shadow-2xs"
-                title="Generate formal escalation letter for municipal authorities"
-              >
-                <BiFile className="text-base" />
-                Draft Grievance Letter
-              </button>
             </div>
           </div>
         </div>
@@ -760,6 +657,115 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
           </div>
         )}
       </section>
+
+      {/* Interactive Guide & Citizen SOP Modal Pop-up */}
+      {showGuideModal && (
+        <div className="fixed inset-0 z-[1500] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-2xl">🗺️</span>
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-900 m-0">Interactive Map Guide</h2>
+                    <p className="text-xs text-slate-500 m-0">Citizen Standard Operating Procedure (SOP)</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowGuideModal(false)}
+                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center cursor-pointer transition"
+                  aria-label="Close"
+                >
+                  <BiX className="text-xl" />
+                </button>
+              </div>
+
+              {/* Map Significance (Visual Legend) */}
+              <div className="mb-5">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                  Map Significance (Visual Legend):
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <div className="flex items-start gap-2 p-2.5 rounded-xl bg-red-50/70 border border-red-200/80">
+                    <span className="text-base shrink-0">🔴</span>
+                    <div>
+                      <strong className="text-red-700">Critical:</strong> Immediate safety hazard (open manhole, live wire, collapsed road). Top priority routing.
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2 p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/80">
+                    <span className="text-base shrink-0">🟠</span>
+                    <div>
+                      <strong className="text-amber-800">High / Moderate:</strong> Severe infrastructure defect requiring scheduled municipal maintenance.
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2 p-2.5 rounded-xl bg-blue-50/70 border border-blue-200/80">
+                    <span className="text-base shrink-0">🔵</span>
+                    <div>
+                      <strong className="text-blue-700">Verified:</strong> Authenticated on-ground by 3 local citizens within 250m proximity.
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2 p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-200/80">
+                    <span className="text-base shrink-0">🟢</span>
+                    <div>
+                      <strong className="text-emerald-700">Resolved:</strong> Municipal repair verified completed and officially closed.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3-Step Civic SOP */}
+              <div className="mb-5">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                  3-Step Civic SOP (How to interact with this page):
+                </h3>
+                <div className="flex flex-col gap-2 text-xs text-slate-700">
+                  <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <span className="font-black text-blue-600 font-mono text-sm shrink-0">1.</span>
+                    <div>
+                      <strong className="text-slate-900">Locate:</strong> Select your city dropdown or click <em className="text-blue-700 font-semibold">"Locate 5km Around Me"</em> at the top of the map to filter nearby issues.
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <span className="font-black text-blue-600 font-mono text-sm shrink-0">2.</span>
+                    <div>
+                      <strong className="text-slate-900">Eyewitness Verify:</strong> When near an unverified defect (&lt; 250m), click <em className="text-blue-700 font-semibold">Verify</em> to authenticate it on-ground. 3 community verifications trigger expedited authority action.
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <span className="font-black text-blue-600 font-mono text-sm shrink-0">3.</span>
+                    <div>
+                      <strong className="text-slate-900">Escalate:</strong> If an urgent issue remains unattended, click <em className="text-indigo-700 font-semibold">Draft Grievance Letter</em> below to auto-generate a formal directive for municipal heads.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Bar */}
+            <div className="pt-3 border-t border-slate-100 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowGuideModal(false);
+                  setShowGrievanceModal(true);
+                }}
+                className="flex-1 text-xs font-bold py-2.5 px-4 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 flex items-center justify-center gap-2 cursor-pointer transition shadow-2xs"
+              >
+                <BiFile className="text-base" />
+                Draft Grievance Letter
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowGuideModal(false)}
+                className="text-xs font-bold py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 cursor-pointer transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Official Grievance Memorandum Modal */}
       {showGrievanceModal && (
