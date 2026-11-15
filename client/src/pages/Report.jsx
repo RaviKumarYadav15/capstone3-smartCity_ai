@@ -184,6 +184,7 @@ export default function Report() {
           severity: res.severity,
           department: res.department,
           priority: res.priority,
+          token: res.token,
         });
         if (res.category) {
           setCategory(res.category);
@@ -192,7 +193,9 @@ export default function Report() {
           setDescription(res.description);
           setAiDraftGenerated(true);
         }
-        toast.success(`Photo verified! Detected ${res.category} (${res.severity} severity)`);
+        const catText = res.category || 'civic issue';
+        const sevText = res.severity ? ` (${res.severity} severity)` : '';
+        toast.success(`Photo verified! Detected ${catText}${sevText}`);
       }
     } catch (err) {
       const msg = err.message || 'Failed to verify photo with AI';
@@ -323,7 +326,7 @@ export default function Report() {
       if (res.category && (!category || category === '')) {
         setCategory(res.category);
       }
-      toast.success(`AI generated description & detected category (${res.category})`);
+      toast.success(`AI generated description & detected category (${res.category || 'other'})`);
     } catch (err) {
       const msg = err.message || 'Failed to analyze photo with AI';
       toast.error(msg);
@@ -338,7 +341,7 @@ export default function Report() {
       openAuthModal();
       return;
     }
-    if (!isPhotoVerified) {
+    if (aiEnabled && !isPhotoVerified) {
       toast.error('Please verify your photo with AI before submitting the report');
       return;
     }
@@ -368,6 +371,9 @@ export default function Report() {
       if (category) form.append('category', category);
       if (description.trim()) {
         form.append('description', description.trim());
+      }
+      if (imageVerification?.token) {
+        form.append('aiToken', imageVerification.token);
       }
       const res = await api.upload('/reports', form);
 

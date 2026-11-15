@@ -6,3 +6,12 @@ export function detectImageType(buf) {
   if (buf.toString('ascii', 0, 4) === 'RIFF' && buf.toString('ascii', 8, 12) === 'WEBP') return { mime: 'image/webp', ext: 'webp' };
   return null;
 }
+
+/** Resolves stored image names or URLs to a safe public image URL. */
+export function publicImageUrl(img) {
+  if (!img) return null;
+  if (img.startsWith('http://') || img.startsWith('https://') || img.startsWith('data:') || img.startsWith('blob:')) {
+    return img;
+  }
+  return `/uploads/${img.replace(/^\/+/, '')}`;
+}

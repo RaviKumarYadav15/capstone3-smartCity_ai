@@ -682,13 +682,13 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
                     <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600 uppercase">
                       Trend: {prediction.trend}
                     </span>
-                    {prediction.risk_level && (
+                    {(prediction.riskLevel || prediction.risk_level) && (
                       <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full uppercase border ${
-                        prediction.risk_level === 'high' ? 'bg-red-50 text-red-700 border-red-200' :
-                        prediction.risk_level === 'medium' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                        (prediction.riskLevel || prediction.risk_level) === 'high' ? 'bg-red-50 text-red-700 border-red-200' :
+                        (prediction.riskLevel || prediction.risk_level) === 'medium' ? 'bg-amber-50 text-amber-700 border-amber-200' :
                         'bg-blue-50 text-blue-700 border-blue-200'
                       }`}>
-                        Risk: {prediction.risk_level}
+                        Risk: {prediction.riskLevel || prediction.risk_level}
                       </span>
                     )}
                   </div>

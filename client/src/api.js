@@ -34,6 +34,7 @@ async function request(path, { method = 'GET', body, form } = {}, retries = 1) {
 export const api = {
   get: (p) => request(p),
   post: (p, body) => request(p, { method: 'POST', body }),
+  put: (p, body) => request(p, { method: 'PUT', body }),
   patch: (p, body) => request(p, { method: 'PATCH', body }),
   del: (p) => request(p, { method: 'DELETE' }),
   upload: (p, form) => request(p, { method: 'POST', form }),

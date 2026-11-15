@@ -1,5 +1,8 @@
+import crypto from 'node:crypto';
 import { Router } from 'express';
+import jwt from 'jsonwebtoken';
 import { z } from 'zod';
+import { env } from '../config/env.js';
 import { Report, serializeReport, STATUSES } from '../models/Report.js';
 import { asyncHandler, HttpError } from '../utils/HttpError.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
@@ -38,6 +41,7 @@ const createSchema = z.object({
   country: z.string().max(200).optional(),
   pincode: z.string().max(50).optional(),
   formattedAddress: z.string().max(500).optional(),
+  aiToken: z.string().optional(),
 });
 
 router.get('/', asyncHandler(async (req, res) => {
@@ -72,6 +76,22 @@ router.post('/describe', requireAuth, perUser(20), imageUpload, asyncHandler(asy
       });
     }
 
+    const imageHash = crypto.createHash('sha256').update(req.file.buffer).digest('hex');
+    const token = jwt.sign(
+      {
+        isValid: true,
+        category: analysis.category || 'other',
+        severity: analysis.severity || 'medium',
+        department: analysis.department || '',
+        priority: analysis.priority || 5,
+        steps: analysis.steps || '',
+        fixTime: analysis.fixTime || '',
+        imageHash,
+      },
+      env.jwtSecret,
+      { expiresIn: '1h' }
+    );
+
     return res.json({
       isValid: true,
       category: analysis.category || 'other',
@@ -79,13 +99,18 @@ router.post('/describe', requireAuth, perUser(20), imageUpload, asyncHandler(asy
       severity: analysis.severity || 'medium',
       department: analysis.department || '',
       priority: analysis.priority || 5,
+      steps: analysis.steps || '',
+      token,
     });
   } catch (err) {
     console.error('Image analysis error in /describe:', err);
-    return res.json({
-      isValid: false,
-      rejectionReason: err.message || 'The photo could not be verified by the AI inspector. Please try another photo.',
-    });
+    if (err instanceof HttpError && err.status === 400) {
+      return res.json({
+        isValid: false,
+        rejectionReason: err.message,
+      });
+    }
+    throw new HttpError(503, err.message || 'AI verification service is temporarily unavailable. Please try again.');
   }
 }));
 
@@ -95,24 +120,47 @@ router.post('/', requireAuth, perUser(10), imageUpload, asyncHandler(async (req,
 
   let fields = null;
   let saved = null;
+  let needsReview = false;
+
   if (req.file) {
     const type = detectImageType(req.file.buffer);
     if (!type) throw new HttpError(400, 'Only JPEG, PNG or WebP images are allowed');
-    if (!body.category || !body.description) {
-      if (aiEnabled()) {
-        try {
-          fields = await analyzeIssueImage({ buffer: req.file.buffer, mime: type.mime });
-          if (fields && fields.isValid === false) {
-            throw new HttpError(400, fields.rejectionReason || 'The uploaded photo does not appear to show a valid civic infrastructure issue.');
-          }
-        } catch (e) {
-          if (e.status === 400) throw e;
-          console.warn('AI analysis temporarily unavailable, proceeding with citizen category:', e.message);
+    const imageHash = crypto.createHash('sha256').update(req.file.buffer).digest('hex');
+
+    // 1. Try to reuse signed AI analysis token if provided by client
+    if (body.aiToken) {
+      try {
+        const decoded = jwt.verify(body.aiToken, env.jwtSecret);
+        if (decoded && decoded.isValid && decoded.imageHash === imageHash) {
+          fields = sanitizeIssueReport(decoded);
         }
+      } catch (tokenErr) {
+        console.warn('Invalid or expired AI token:', tokenErr.message);
       }
     }
+
+    // 2. Server-side photo check: if no valid token, run the AI check directly
+    if (!fields) {
+      if (aiEnabled()) {
+        try {
+          const analysis = await analyzeIssueImage({ buffer: req.file.buffer, mime: type.mime });
+          if (analysis && analysis.isValid === false) {
+            throw new HttpError(400, analysis.rejectionReason || 'The uploaded photo does not appear to show a valid civic infrastructure issue.');
+          }
+          fields = sanitizeIssueReport(analysis);
+        } catch (e) {
+          if (e.status === 400) throw e;
+          console.warn('AI analysis temporarily unavailable, saving report flagged needsReview:', e.message);
+          needsReview = true;
+        }
+      } else {
+        needsReview = true;
+      }
+    }
+
     saved = await saveImage(req.file.buffer);
   }
+
   if (!fields) {
     if (!body.category && !body.description) throw new HttpError(400, 'AI analysis is unavailable: choose a category or describe the issue');
     fields = sanitizeIssueReport({
@@ -122,9 +170,11 @@ router.post('/', requireAuth, perUser(10), imageUpload, asyncHandler(async (req,
       priority: 5,
     });
   }
+
   if (fields.isValid === false) {
     throw new HttpError(400, fields.rejectionReason || 'The uploaded photo was rejected as non-civic.');
   }
+
   if (body.category && CATEGORIES.includes(body.category)) {
     fields.category = body.category;
     if (DEPARTMENTS[body.category]) fields.department = DEPARTMENTS[body.category];
@@ -154,6 +204,7 @@ router.post('/', requireAuth, perUser(10), imageUpload, asyncHandler(async (req,
     location: { type: 'Point', coordinates: [body.lng, body.lat] },
     address: addressData,
     image: saved?.name,
+    needsReview,
     user: req.user._id,
     userName: req.user.name,
   });

@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { publicImageUrl } from '../utils/image.js';
 
 export const DISPUTE_CATEGORIES = ['Substandard Material Quality', 'Abandoned / Delayed Work', 'Ghost Project', 'Warranty Defect', 'Other'];
 
@@ -22,7 +23,7 @@ export const serializeDispute = (doc, userId) => {
   const uid = userId ? String(userId) : null;
   return {
     id: String(d._id), tenderId: d.tenderId, category: d.category, description: d.description,
-    imageUrl: d.image ? `/uploads/${d.image}` : null, userName: d.userName || 'Citizen',
+    imageUrl: publicImageUrl(d.image), userName: d.userName || 'Citizen',
     supportCount: (d.supporters ?? []).length,
     iSupported: uid ? (d.supporters ?? []).some((s) => String(s) === uid) : false,
     mine: uid ? String(d.user) === uid : false,

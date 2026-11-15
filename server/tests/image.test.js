@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { detectImageType } from '../src/utils/image.js';
+import { detectImageType, publicImageUrl } from '../src/utils/image.js';
 
 const pad = (b) => Buffer.concat([Buffer.from(b), Buffer.alloc(16)]);
 
@@ -15,4 +15,12 @@ test('rejects html/svg/script disguised as an image', () => {
   assert.equal(detectImageType(Buffer.from('<svg onload=alert(1)> padding padding')), null);
   assert.equal(detectImageType(Buffer.from('GIF89a padding padding padding')), null);
   assert.equal(detectImageType(Buffer.alloc(3)), null);
+});
+
+test('publicImageUrl preserves absolute URLs and prefixes local paths', () => {
+  assert.equal(publicImageUrl('https://res.cloudinary.com/demo/image/upload/v1/sample.jpg'), 'https://res.cloudinary.com/demo/image/upload/v1/sample.jpg');
+  assert.equal(publicImageUrl('data:image/jpeg;base64,123'), 'data:image/jpeg;base64,123');
+  assert.equal(publicImageUrl('photo.jpg'), '/uploads/photo.jpg');
+  assert.equal(publicImageUrl('/photo.jpg'), '/uploads/photo.jpg');
+  assert.equal(publicImageUrl(null), null);
 });

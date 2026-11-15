@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { CATEGORIES, LEVELS, DEFAULT_STEPS } from '../utils/sanitize.js';
+import { publicImageUrl } from '../utils/image.js';
 
 export const STATUSES = ['reported', 'verified', 'under_review', 'in_progress', 'resolved'];
 
@@ -26,6 +27,7 @@ const reportSchema = new mongoose.Schema({
   },
   image: String, // file name inside UPLOAD_DIR
   status: { type: String, enum: STATUSES, default: 'reported', index: true },
+  needsReview: { type: Boolean, default: false, index: true },
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   userName: String, // display name only; e-mail is never stored on public documents
   votes: [{ _id: false, user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, type: { type: String, enum: ['up', 'down'] } }],
@@ -66,7 +68,8 @@ export function serializeReport(doc, userId, userRole = null) {
       pincode: r.address.pincode || '',
       formatted: r.address.formatted || '',
     } : null,
-    imageUrl: r.image ? (r.image.startsWith('http') || r.image.startsWith('data:') ? r.image : `/uploads/${r.image}`) : null,
+    imageUrl: publicImageUrl(r.image),
+    needsReview: Boolean(r.needsReview),
     userName: r.userName || 'Resident',
     createdAt: r.createdAt,
     upvotes: votes.filter((v) => v.type === 'up').length,

@@ -273,14 +273,16 @@ export default function ReportAnalysisModal({ report, onClose, onUpdate, isNewSu
                       onClick={async () => {
                         if (isEditingLetter) {
                           try {
-                            await api.put(`/reports/${report.id}/letter`, { letter });
+                            const res = await api.put(`/reports/${report.id}/letter`, { letter });
                             toast.success('Letter edits saved to report');
-                          } catch {
-                            toast.success('Letter edits saved locally');
+                            onUpdate?.({ ...report, complaintLetter: res?.letter || letter });
+                            setIsEditingLetter(false);
+                          } catch (err) {
+                            toast.error(err.message || 'Failed to save letter edits');
                           }
-                          onUpdate?.({ ...report, complaintLetter: letter });
+                          return;
                         }
-                        setIsEditingLetter(!isEditingLetter);
+                        setIsEditingLetter(true);
                       }}
                     >
                       {isEditingLetter ? (

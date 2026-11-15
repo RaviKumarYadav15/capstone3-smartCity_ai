@@ -67,40 +67,16 @@ router.post('/:tenderId/breakdown', requireAuth, perUser(15), asyncHandler(async
 
   const canRegenerate = ['authority', 'admin'].includes(req.user.role);
   if (!tender.aiBreakdown?.feasibility || canRegenerate) {
-    if (aiEnabled()) {
-      try {
-        tender.aiBreakdown = await breakdownTender(tender);
-      } catch (err) {
-        tender.aiBreakdown = {
-          estimate: true,
-          table: tender.aiBreakdown?.table || [],
-          warrantyNotes: tender.warranty || 'Defect liability terms as per agreement.',
-          checklist: ['Request Schedule of Rates comparison from the department.'],
-          feasibility: {
-            verdict: 'human_audit_needed',
-            summary: 'AI analysis could not verify expenses automatically. On-site human verification by municipal engineers recommended.',
-            keyObservations: ['Tender scope requires field verification with measurement records.'],
-            citizenQuestions: ['Request site inspection report and quality assurance test results.'],
-          },
-          generatedAt: new Date(),
-        };
-      }
-    } else {
-      tender.aiBreakdown = {
-        estimate: true,
-        table: tender.aiBreakdown?.table || [],
-        warrantyNotes: tender.warranty || 'Defect liability terms as per agreement.',
-        checklist: ['Request Schedule of Rates comparison from the department.'],
-        feasibility: {
-          verdict: 'human_audit_needed',
-          summary: 'AI analysis service is offline. On-site verification recommended.',
-          keyObservations: ['Manual audit required by municipal authority.'],
-          citizenQuestions: ['Request the complete Bill of Quantities (BOQ).'],
-        },
-        generatedAt: new Date(),
-      };
+    if (!aiEnabled()) {
+      throw new HttpError(503, 'AI tender audit service is currently not configured or offline.');
     }
-    await tender.save();
+    try {
+      tender.aiBreakdown = await breakdownTender(tender);
+      await tender.save();
+    } catch (err) {
+      console.error('Tender audit error:', err);
+      throw new HttpError(502, `AI tender audit failed: ${err.message || 'Service unavailable'}. Please retry.`);
+    }
   }
 
   const counts = await disputeCounts([tender.tenderId]);
