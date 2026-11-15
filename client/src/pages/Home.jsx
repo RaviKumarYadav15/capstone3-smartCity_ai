@@ -48,30 +48,26 @@ export default function Home() {
   ];
 
   return (
-    <div className="flex flex-col gap-16 pt-4 pb-12">
+    <div className="flex flex-col gap-16 pt-4 pb-12 relative">
+      {/* Independent Floating Guidelines Badge (Side, Top Right - Sale Style) */}
+      <div className="fixed top-20 sm:top-24 right-3 sm:right-6 z-30 animate-in fade-in slide-in-from-right duration-300">
+        <button
+          type="button"
+          onClick={() => setShowGuidelinesModal(true)}
+          className="group relative flex items-center gap-2 py-2 px-4 rounded-full bg-white/95 hover:bg-white text-slate-800 text-xs sm:text-sm font-bold border border-blue-200/90 shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer backdrop-blur-md hover:scale-105 active:scale-95"
+          title="Platform Guidelines"
+        >
+          {/* Soft, gentle breathing pulse indicator (not harsh/strobe) */}
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75 duration-1000"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-600"></span>
+          </span>
+          <span className="text-slate-900 font-extrabold tracking-tight">Guidelines</span>
+        </button>
+      </div>
+
       {/* Hero Section */}
       <div className="text-center pt-8 sm:pt-12 pb-2">
-        {/* Soft-Pulsing Guidelines Pill Button */}
-        <div className="flex justify-center mb-5">
-          <button
-            type="button"
-            onClick={() => setShowGuidelinesModal(true)}
-            className="group inline-flex items-center gap-2.5 px-4 py-1.5 sm:px-5 sm:py-2 rounded-full bg-white/95 hover:bg-white text-slate-800 text-xs sm:text-sm font-bold border border-blue-200/90 shadow-2xs hover:shadow-md transition-all duration-300 cursor-pointer select-none backdrop-blur-xs hover:border-blue-300"
-            title="Click to view full operational guidelines and anti-fraud policy"
-          >
-            {/* Soft, non-distracting breathing pulse dot */}
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75 duration-1000"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-600"></span>
-            </span>
-            <span className="text-slate-900 font-extrabold tracking-tight">Guidelines</span>
-            <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
-              How It Works & Anti-Fraud Policy
-            </span>
-            <span className="text-slate-400 group-hover:translate-x-0.5 transition-transform text-xs">→</span>
-          </button>
-        </div>
-
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-semibold max-w-4xl mx-auto leading-tight md:leading-snug text-slate-900 tracking-tight">
           Transform Your City with{' '}
           <span className="relative inline-block mt-2 md:mt-0">
@@ -276,7 +272,7 @@ export default function Home() {
       </div>
 
       {/* Visible Frequently Asked Questions (FAQ) Section above footer */}
-      <FaqSection onOpenGuidelines={() => setShowGuidelinesModal(true)} />
+      <FaqSection />
 
       {/* Operating Guidelines Modal */}
       <GuidelinesModal

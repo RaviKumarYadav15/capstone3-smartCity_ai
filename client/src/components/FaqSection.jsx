@@ -28,8 +28,8 @@ const FAQS = [
   },
 ];
 
-export default function FaqSection({ onOpenGuidelines }) {
-  const [openIndex, setOpenIndex] = useState(0); // open first FAQ by default
+export default function FaqSection() {
+  const [openIndex, setOpenIndex] = useState(null); // closed initially; opens only on click
 
   const toggle = (idx) => {
     setOpenIndex(openIndex === idx ? null : idx);
@@ -37,17 +37,14 @@ export default function FaqSection({ onOpenGuidelines }) {
 
   return (
     <section id="faq" className="w-full max-w-6xl mx-auto pt-6 border-t border-slate-200/80">
-      <div className="text-center mb-10">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold uppercase tracking-wider mb-3">
+      <div className="text-center mb-8">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold uppercase tracking-wider mb-2">
           <BsQuestionCircleFill size={13} />
-          <span>Frequently Asked Questions</span>
+          <span>Help & Support</span>
         </div>
-        <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-          Everything You Need to Know
+        <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight m-0">
+          Frequently Asked Questions
         </h2>
-        <p className="text-slate-500 text-xs sm:text-sm max-w-xl mx-auto mt-2 leading-relaxed">
-          Clear answers about automated AI verification, citizen peer reviews, tender warranties, and platform integrity rules.
-        </p>
       </div>
 
       <div className="space-y-3 max-w-4xl mx-auto">
@@ -91,19 +88,6 @@ export default function FaqSection({ onOpenGuidelines }) {
           );
         })}
       </div>
-
-      {onOpenGuidelines && (
-        <div className="mt-8 text-center">
-          <p className="text-xs text-slate-500 mb-2">Still looking for detailed operating procedures?</p>
-          <button
-            type="button"
-            onClick={onOpenGuidelines}
-            className="text-xs font-bold text-blue-600 hover:text-blue-800 underline cursor-pointer"
-          >
-            Read the Full Platform Guidelines & Civic Charter →
-          </button>
-        </div>
-      )}
     </section>
   );
 }
