@@ -388,8 +388,8 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
           <div id="live-incident-map" className="lg:col-span-7 xl:col-span-8 flex flex-col justify-between h-full">
             {/* Map Frame with Controls Floated Directly ON the Map (isolated stacking context, z-[10]) */}
             <div className="relative rounded-2xl overflow-hidden border border-slate-200 w-full flex-1 min-h-[380px] sm:min-h-[420px] isolate">
-              {/* Floating Controls Directly ON the Map: Locate, Layer & Visible Count */}
-              <div className="absolute top-3 right-3 z-[10] flex items-center gap-2 max-w-[90%] flex-wrap justify-end">
+              {/* Floating Controls Directly ON the Map: Locate, Layer & Visible Count (Horizontal Single Row) */}
+              <div className="absolute top-3 right-3 z-[10] flex items-center gap-2 flex-nowrap max-w-[calc(100%-60px)]">
                 {/* Locate 5km Around Me Button ON TOP OF MAP */}
                 <button
                   type="button"
@@ -397,7 +397,7 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
                   disabled={locatingUser}
                   title={isNearby5km ? 'Click to reset back to full view' : 'Locate 5km Around Me'}
                   aria-label="Locate 5km Around Me"
-                  className={`transition-all cursor-pointer flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-bold border shadow-md select-none backdrop-blur-md ${
+                  className={`shrink-0 transition-all cursor-pointer flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-bold border shadow-md select-none backdrop-blur-md whitespace-nowrap ${
                     isNearby5km
                       ? 'bg-blue-600/95 text-white border-blue-700'
                       : 'bg-white/95 hover:bg-white text-slate-800 border-slate-200/90'
@@ -427,7 +427,7 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
                   value={layer}
                   onChange={(e) => setLayer(e.target.value)}
                   aria-label="Map Tile Style"
-                  className="text-xs font-semibold py-1.5 px-2.5 rounded-xl border border-slate-200/90 bg-white/95 backdrop-blur-md text-slate-700 cursor-pointer shadow-md hover:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition"
+                  className="shrink-0 text-xs font-semibold py-1.5 px-2.5 rounded-xl border border-slate-200/90 bg-white/95 backdrop-blur-md text-slate-700 cursor-pointer shadow-md hover:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition max-w-[130px] sm:max-w-[170px] truncate"
                 >
                   {Object.entries(LAYERS).map(([k, v]) => (
                     <option key={k} value={k}>
@@ -437,7 +437,7 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
                 </select>
 
                 {/* Visible Count Badge ON TOP OF MAP */}
-                <span className="text-xs font-bold text-slate-700 bg-white/95 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-slate-200/90 shadow-md shrink-0">
+                <span className="shrink-0 text-xs font-bold text-slate-700 bg-white/95 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-slate-200/90 shadow-md whitespace-nowrap">
                   {visible.length} visible
                 </span>
               </div>
