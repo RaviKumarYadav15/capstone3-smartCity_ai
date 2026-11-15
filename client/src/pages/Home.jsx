@@ -48,24 +48,7 @@ export default function Home() {
   ];
 
   return (
-    <div className="flex flex-col gap-16 pt-4 pb-12 relative">
-      {/* Independent Floating Guidelines Badge (Side, Top Right - Sale Style) */}
-      <div className="fixed top-20 sm:top-24 right-3 sm:right-6 z-30 animate-in fade-in slide-in-from-right duration-300">
-        <button
-          type="button"
-          onClick={() => setShowGuidelinesModal(true)}
-          className="group relative flex items-center gap-2 py-2 px-4 rounded-full bg-white/95 hover:bg-white text-slate-800 text-xs sm:text-sm font-bold border border-blue-200/90 shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer backdrop-blur-md hover:scale-105 active:scale-95"
-          title="Platform Guidelines"
-        >
-          {/* Soft, gentle breathing pulse indicator (not harsh/strobe) */}
-          <span className="relative flex h-2.5 w-2.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75 duration-1000"></span>
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-600"></span>
-          </span>
-          <span className="text-slate-900 font-extrabold tracking-tight">Guidelines</span>
-        </button>
-      </div>
-
+    <div className="flex flex-col gap-16 pt-4 pb-12">
       {/* Hero Section */}
       <div className="text-center pt-8 sm:pt-12 pb-2">
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-semibold max-w-4xl mx-auto leading-tight md:leading-snug text-slate-900 tracking-tight">
@@ -81,7 +64,7 @@ export default function Home() {
           Report civic infrastructure issues with smart AI validation, track repair progress, and audit municipal tenders in plain language
         </p>
 
-        {/* 3 Core Quick-Action Buttons (Optimized for both Desktop & Mobile Devices) */}
+        {/* 4 Core Quick-Action Buttons (Optimized for both Desktop & Mobile Devices) */}
         <div className="flex flex-wrap justify-center gap-3.5 mt-8 px-4">
           <button
             onClick={handleReportClick}
@@ -105,6 +88,20 @@ export default function Home() {
           >
             <BsBuilding size={18} />
             <span>Audit Tenders</span>
+          </button>
+
+          {/* Guidelines Button (Right Side of the Three Buttons, Fixed in Row) */}
+          <button
+            type="button"
+            onClick={() => setShowGuidelinesModal(true)}
+            className="w-full sm:w-auto bg-white border border-slate-300 text-slate-700 hover:text-blue-600 hover:border-blue-300 px-7 py-3.5 rounded-full hover:bg-slate-50 transition flex items-center justify-center gap-2.5 cursor-pointer font-medium text-sm md:text-base shadow-xs"
+          >
+            {/* Soft, gentle breathing pulse indicator (not harsh/strobe) */}
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75 duration-1000"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-600"></span>
+            </span>
+            <span>Guidelines</span>
           </button>
         </div>
       </div>
