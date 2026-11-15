@@ -5,7 +5,8 @@ import { HttpError } from '../utils/HttpError.js';
 
 const WEEK = 7 * 24 * 3600 * 1000;
 
-export const signToken = (user) => jwt.sign({ sub: String(user._id) }, env.jwtSecret, { expiresIn: '7d' });
+export const signToken = (user) =>
+  jwt.sign({ sub: String(user._id), tv: user.tokenVersion ?? 0 }, env.jwtSecret, { expiresIn: '7d' });
 
 export const setAuthCookie = (res, token) =>
   res.cookie('token', token, {
@@ -29,8 +30,11 @@ export async function loadUser(req, _res, next) {
   const token = req.cookies?.token;
   if (!token) return next();
   try {
-    const { sub } = jwt.verify(token, env.jwtSecret);
-    req.user = await User.findById(sub);
+    const { sub, tv } = jwt.verify(token, env.jwtSecret);
+    const user = await User.findById(sub);
+    if (user && (user.tokenVersion ?? 0) === (tv ?? 0)) {
+      req.user = user;
+    }
   } catch { /* invalid or expired token -> anonymous */ }
   next();
 }

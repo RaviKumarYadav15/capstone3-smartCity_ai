@@ -26,8 +26,13 @@ export default function Admin() {
   }, [load]);
 
   const setStatus = async (id, status) => {
+    let resolutionNotes;
+    if (status === 'resolved') {
+      const input = window.prompt('Optional: Enter resolution summary / repair verification notes:');
+      if (input !== null && input.trim()) resolutionNotes = input.trim();
+    }
     try {
-      await api.patch(`/reports/${id}/status`, { status });
+      await api.patch(`/reports/${id}/status`, { status, resolutionNotes });
       load();
       toast('Status updated');
     } catch (e) {

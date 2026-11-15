@@ -1,9 +1,3 @@
-import tls from 'node:tls';
-try {
-  tls.DEFAULT_MIN_VERSION = 'TLSv1.2';
-  tls.DEFAULT_MAX_VERSION = 'TLSv1.2';
-} catch {}
-
 try {
   const { env } = await import('./config/env.js');
   const { connectDb } = await import('./config/db.js');

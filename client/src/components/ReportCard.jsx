@@ -45,6 +45,30 @@ export default function ReportCard({ report: r, onChange, onLocate }) {
     }
   };
 
+  const handleVerify = () => {
+    if (!user) {
+      openAuthModal();
+      return;
+    }
+    if (['admin', 'authority'].includes(user?.role)) {
+      act('verify', {});
+      return;
+    }
+    if (!navigator.geolocation) {
+      toast('GPS location required to verify issues near you');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        act('verify', { lat: pos.coords.latitude, lng: pos.coords.longitude });
+      },
+      () => {
+        toast('Please enable GPS location to verify issues near you');
+      },
+      { timeout: 8000 }
+    );
+  };
+
   return (
     <article className="bg-white border border-slate-200/90 rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col">
       {r.imageUrl ? (
@@ -142,7 +166,7 @@ export default function ReportCard({ report: r, onChange, onLocate }) {
               }`}
               disabled={r.iVerified || r.mine}
               title={r.mine ? 'You cannot verify your own report' : 'Verify this on-ground issue'}
-              onClick={() => act('verify')}
+              onClick={handleVerify}
             >
               {r.iVerified ? '✓ You verified' : `Verify (${r.verifications}/3)`}
             </button>

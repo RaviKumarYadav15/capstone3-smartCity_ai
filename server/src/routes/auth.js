@@ -8,6 +8,9 @@ import { authLimiter } from '../middleware/limits.js';
 
 const router = Router();
 
+// Constant cost-12 bcrypt hash for dummy comparisons to avoid username enumeration via response timing
+const DUMMY_HASH = '$2b$12$K1J8qYh5uT8M3o5N7V2Q2.N0yM2lP9kR8sU1vW3xY5zA7bC9dE1fG';
+
 const registerSchema = z.object({
   name: z.string().trim().min(2).max(60),
   email: z.string().trim().toLowerCase().email().max(120),
@@ -27,13 +30,20 @@ router.post('/register', authLimiter, asyncHandler(async (req, res) => {
 router.post('/login', authLimiter, asyncHandler(async (req, res) => {
   const { email, password } = loginSchema.parse(req.body);
   const user = await User.findOne({ email }).select('+passwordHash');
-  const ok = user && (await bcrypt.compare(password, user.passwordHash));
-  if (!ok) throw new HttpError(401, 'Invalid e-mail or password');
+  const hashToCompare = user ? user.passwordHash : DUMMY_HASH;
+  const ok = await bcrypt.compare(password, hashToCompare);
+  if (!user || !ok) throw new HttpError(401, 'Invalid e-mail or password');
   setAuthCookie(res, signToken(user));
   res.json({ user: user.toPublic() });
 }));
 
 router.post('/logout', (_req, res) => { clearAuthCookie(res); res.status(204).end(); });
+
+router.post('/logout-all', requireAuth, asyncHandler(async (req, res) => {
+  await User.findByIdAndUpdate(req.user._id, { $inc: { tokenVersion: 1 } });
+  clearAuthCookie(res);
+  res.status(204).end();
+}));
 
 router.get('/me', requireAuth, (req, res) => res.json({ user: req.user.toPublic() }));
 

@@ -21,7 +21,7 @@ export default function App() {
           <Route path="/report" element={<Report />} />
           <Route path="/map" element={<MapPage />} />
           <Route path="/tenders" element={<Tenders />} />
-          <Route path="/admin" element={<RequireRole roles={['admin']}><Admin /></RequireRole>} />
+          <Route path="/admin" element={<RequireRole roles={['authority', 'admin']}><Admin /></RequireRole>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

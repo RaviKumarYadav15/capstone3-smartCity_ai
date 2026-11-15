@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { env } from '../config/env.js';
 import { Report, serializeReport, STATUSES } from '../models/Report.js';
-import { asyncHandler, HttpError } from '../utils/HttpError.js';
+import { asyncHandler, HttpError, escapeRegex } from '../utils/HttpError.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { imageUpload, saveImage, removeImage } from '../middleware/upload.js';
 import { perUser } from '../middleware/limits.js';
@@ -46,12 +46,46 @@ const createSchema = z.object({
 
 router.get('/', asyncHandler(async (req, res) => {
   const filter = {};
-  const { status, severity } = req.query;
+  const { status, severity, city, bbox } = req.query;
   if (typeof status === 'string' && STATUSES.includes(status)) filter.status = status;
-  if (typeof severity === 'string') filter.severity = severity;
-  const limit = Math.min(Number(req.query.limit) || 200, 200);
-  const docs = await Report.find(filter).sort({ createdAt: -1 }).limit(limit);
-  res.json({ reports: docs.map((d) => serializeReport(d, req.user?._id, req.user?.role)) });
+  if (typeof severity === 'string' && LEVELS.includes(severity)) filter.severity = severity;
+
+  if (typeof city === 'string' && city.trim()) {
+    const rx = new RegExp(escapeRegex(city.trim().slice(0, 100)), 'i');
+    filter.$or = [{ 'address.city': rx }, { city: rx }, { 'address.formatted': rx }, { formattedAddress: rx }];
+  }
+
+  if (typeof bbox === 'string') {
+    const parts = bbox.split(',').map(Number);
+    if (parts.length === 4 && parts.every((n) => Number.isFinite(n))) {
+      const [minLng, minLat, maxLng, maxLat] = parts;
+      filter.location = {
+        $geoWithin: {
+          $box: [
+            [Math.max(-180, Math.min(180, minLng)), Math.max(-90, Math.min(90, minLat))],
+            [Math.max(-180, Math.min(180, maxLng)), Math.max(-90, Math.min(90, maxLat))],
+          ],
+        },
+      };
+    }
+  }
+
+  const limit = Math.min(Math.max(Number(req.query.limit) || 200, 1), 1000);
+  const page = Math.max(Number(req.query.page) || 1, 1);
+  const skip = (page - 1) * limit;
+
+  const [total, docs] = await Promise.all([
+    Report.countDocuments(filter),
+    Report.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+  ]);
+
+  res.json({
+    reports: docs.map((d) => serializeReport(d, req.user?._id, req.user?.role)),
+    total,
+    page,
+    limit,
+    pages: Math.ceil(total / limit),
+  });
 }));
 
 router.get('/:id', asyncHandler(async (req, res) => {
@@ -261,21 +295,61 @@ router.post('/:id/vote', requireAuth, asyncHandler(async (req, res) => {
   res.json({ report: serializeReport(report, uid, req.user?.role) });
 }));
 
+function haversineDistanceKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 router.post('/:id/verify', requireAuth, asyncHandler(async (req, res) => {
   const _id = req.params.id;
   const uid = req.user._id;
   const existing = await Report.findById(_id);
   if (!existing) throw new HttpError(404, 'Report not found');
   if (String(existing.user) === String(uid)) throw new HttpError(403, 'You cannot verify your own report');
+
+  const isStaff = ['admin', 'authority'].includes(req.user.role);
+  if (!isStaff) {
+    const { lat, lng } = z.object({
+      lat: z.coerce.number().min(-90).max(90),
+      lng: z.coerce.number().min(-180).max(180),
+    }).parse(req.body);
+
+    const [reportLng, reportLat] = existing.location?.coordinates || [];
+    if (typeof reportLat === 'number' && typeof reportLng === 'number') {
+      const dist = haversineDistanceKm(lat, lng, reportLat, reportLng);
+      const MAX_VERIFY_DIST_KM = 5;
+      if (dist > MAX_VERIFY_DIST_KM) {
+        throw new HttpError(403, `Verification requires physical proximity: you are ${dist.toFixed(1)} km away (maximum allowed: ${MAX_VERIFY_DIST_KM} km)`);
+      }
+    }
+  }
+
   await Report.updateOne({ _id }, { $addToSet: { verifiedBy: uid } });
   const report = await Report.findById(_id);
   if (report.verifiedBy.length >= 3 && report.status === 'reported') { report.status = 'verified'; await report.save(); }
   res.json({ report: serializeReport(report, uid, req.user?.role) });
 }));
 
-router.patch('/:id/status', requireRole('admin'), asyncHandler(async (req, res) => {
-  const { status } = z.object({ status: z.enum(STATUSES) }).parse(req.body);
-  const report = await Report.findByIdAndUpdate(req.params.id, { status }, { new: true });
+router.patch('/:id/status', requireRole('authority', 'admin'), asyncHandler(async (req, res) => {
+  const { status, resolutionNotes } = z.object({
+    status: z.enum(STATUSES),
+    resolutionNotes: z.string().max(1000).optional(),
+  }).parse(req.body);
+
+  const update = { status };
+  if (status === 'resolved') {
+    update.resolvedBy = req.user._id;
+    update.resolvedAt = new Date();
+    if (resolutionNotes) update.resolutionNotes = resolutionNotes;
+  }
+
+  const report = await Report.findByIdAndUpdate(req.params.id, update, { new: true });
   if (!report) throw new HttpError(404, 'Report not found');
   res.json({ report: serializeReport(report, req.user._id, req.user.role) });
 }));

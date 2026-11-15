@@ -5,6 +5,7 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true, lowercase: true, trim: true, maxlength: 120 },
   passwordHash: { type: String, required: true, select: false },
   role: { type: String, enum: ['citizen', 'authority', 'admin'], default: 'citizen' },
+  tokenVersion: { type: Number, default: 0 },
 }, { timestamps: true });
 
 userSchema.methods.toPublic = function toPublic() {

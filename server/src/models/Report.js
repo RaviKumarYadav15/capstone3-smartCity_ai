@@ -33,6 +33,9 @@ const reportSchema = new mongoose.Schema({
   votes: [{ _id: false, user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, type: { type: String, enum: ['up', 'down'] } }],
   verifiedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   complaintLetter: String,
+  resolutionNotes: { type: String, maxlength: 1000 },
+  resolvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  resolvedAt: Date,
 }, { timestamps: true });
 
 reportSchema.index({ location: '2dsphere' });
@@ -78,6 +81,8 @@ export function serializeReport(doc, userId, userRole = null) {
     myVote: uid ? votes.find((v) => String(v.user) === uid)?.type ?? null : null,
     iVerified: uid ? (r.verifiedBy ?? []).some((v) => String(v) === uid) : false,
     mine: isAuthor,
+    resolutionNotes: r.resolutionNotes || null,
+    resolvedAt: r.resolvedAt || null,
     hasLetter: canAccessLetter ? Boolean(r.complaintLetter) : false,
     complaintLetter: canAccessLetter ? (r.complaintLetter || null) : null,
   };

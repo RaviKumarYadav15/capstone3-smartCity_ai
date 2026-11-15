@@ -94,7 +94,7 @@ export default function Navbar() {
           >
             Public Tenders
           </NavLink>
-          {user?.role === 'admin' && (
+          {['admin', 'authority'].includes(user?.role) && (
             <NavLink
               to="/admin"
               className={({ isActive }) =>
@@ -106,7 +106,7 @@ export default function Navbar() {
               }
             >
               <BsShieldCheck size={14} />
-              Admin
+              {user.role === 'authority' ? 'Authority' : 'Admin'}
             </NavLink>
           )}
         </nav>
@@ -170,7 +170,7 @@ export default function Navbar() {
                     🏛️ Public Tenders
                   </button>
 
-                  {user.role === 'admin' && (
+                  {['admin', 'authority'].includes(user.role) && (
                     <button
                       onClick={() => {
                         setShowUserPopUp(false);
@@ -178,7 +178,7 @@ export default function Navbar() {
                       }}
                       className="w-full text-left text-xs font-semibold py-2 px-2 text-purple-700 hover:bg-purple-50 rounded-lg cursor-pointer transition"
                     >
-                      🛡️ Administration Console
+                      🛡️ {user.role === 'authority' ? 'Authority Console' : 'Administration Console'}
                     </button>
                   )}
 
