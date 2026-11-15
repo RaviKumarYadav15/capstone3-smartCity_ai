@@ -69,6 +69,13 @@ export function createApp() {
   }
   app.use('/uploads', express.static(uploadsDir));
 
+  app.use('/api', (req, res, next) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    next();
+  });
+
   app.use('/api', apiLimiter, sameOrigin, loadUser);
 
   app.get('/api/health', (_req, res) => res.json({ ok: true }));

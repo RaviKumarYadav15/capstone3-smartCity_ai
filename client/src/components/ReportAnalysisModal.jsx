@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import Modal from './Modal.jsx';
-import { api } from '../api.js';
+import { api, resolveImageUrl } from '../api.js';
 import { useAuth } from '../AuthContext.jsx';
 import { useToast } from './Toast.jsx';
 import VoiceInputButton from './VoiceInputButton.jsx';
-import { EMOJI, statusLabel } from '../utils/format.js';
+import { EMOJI, formatDateTime, statusLabel } from '../utils/format.js';
 import {
   BsCheckCircleFill,
   BsFileEarmarkText,
@@ -122,10 +122,29 @@ export default function ReportAnalysisModal({ report, onClose, onUpdate, isNewSu
           </div>
         )}
 
+        {/* Photo Evidence if Uploaded */}
+        {report.imageUrl && (
+          <div className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 flex items-center justify-center max-h-72">
+            <img
+              src={resolveImageUrl(report.imageUrl)}
+              alt={`${report.category} evidence`}
+              className="w-full max-h-72 object-contain"
+            />
+            <span className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-xs text-white text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1">
+              📷 Photo Evidence
+            </span>
+          </div>
+        )}
+
         {/* Incident Description & Meta */}
         <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col gap-2">
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
-            <span><strong>Reported by:</strong> {report.userName || 'Resident'}</span>
+            <span>
+              <strong>Reported by:</strong> {report.userName || 'Resident'} · {formatDateTime(report.createdAt)}
+              {report.resolvedAt && (
+                <span className="text-emerald-700 font-semibold"> · <strong>Resolved:</strong> {formatDateTime(report.resolvedAt)}</span>
+              )}
+            </span>
             <span>📍 {Number(report.lat).toFixed(4)}, {Number(report.lng).toFixed(4)}</span>
           </div>
           {report.address && (report.address.area || report.address.city || report.address.formatted) && (
@@ -139,6 +158,12 @@ export default function ReportAnalysisModal({ report, onClose, onUpdate, isNewSu
           <p className="text-slate-800 text-xs sm:text-sm font-medium leading-relaxed m-0">
             {report.description}
           </p>
+          {report.resolutionNotes && (
+            <div className="mt-1 p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900">
+              <strong className="text-emerald-800 block mb-0.5">✓ Municipal Resolution Summary:</strong>
+              {report.resolutionNotes}
+            </div>
+          )}
         </div>
 
         {/* Issue Overview & Badges */}

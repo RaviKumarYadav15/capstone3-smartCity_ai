@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { api } from '../api.js';
+import { api, resolveImageUrl } from '../api.js';
 import { useToast } from '../components/Toast.jsx';
 import ReportAnalysisModal from '../components/ReportAnalysisModal.jsx';
-import { EMOJI, STATUSES, formatDate, statusLabel } from '../utils/format.js';
+import { EMOJI, STATUSES, formatDate, formatDateTime, statusLabel } from '../utils/format.js';
 
 export default function Admin() {
   const toast = useToast();
@@ -118,24 +118,62 @@ export default function Admin() {
                 className="p-4 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50/80 transition-colors flex flex-wrap items-center justify-between gap-4"
                 key={r.id}
               >
-                <div className="flex-1 min-w-[280px]">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className="font-bold text-slate-900 text-sm">
-                      {EMOJI[r.category]} {r.category}
-                    </span>
-                    <span className={`tag sev-${r.severity} text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full`}>
-                      {r.severity}
-                    </span>
-                    <span className="text-xs text-slate-400">•</span>
-                    <span className="text-xs font-semibold text-slate-600">{r.department}</span>
+                <div className="flex items-start gap-3.5 flex-1 min-w-[280px]">
+                  {/* Photo Evidence Thumbnail or Placeholder */}
+                  {r.imageUrl ? (
+                    <a
+                      href={resolveImageUrl(r.imageUrl)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group relative block w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border border-slate-200 shrink-0 shadow-2xs hover:shadow-md transition-all cursor-pointer bg-slate-100"
+                      title="Click to view full photo evidence in new tab"
+                    >
+                      <img
+                        src={resolveImageUrl(r.imageUrl)}
+                        alt={r.category}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                        loading="lazy"
+                      />
+                      <span className="absolute bottom-1 right-1 bg-black/60 backdrop-blur-xs text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+                        📷
+                      </span>
+                    </a>
+                  ) : (
+                    <div
+                      className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border border-slate-200 bg-slate-50 flex items-center justify-center text-2xl sm:text-3xl shrink-0 select-none"
+                      title="No photo attached"
+                    >
+                      {EMOJI[r.category] || '⚠️'}
+                    </div>
+                  )}
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                      <span className="font-bold text-slate-900 text-sm">
+                        {EMOJI[r.category]} {r.category}
+                      </span>
+                      <span className={`tag sev-${r.severity} text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full`}>
+                        {r.severity}
+                      </span>
+                      <span className="text-xs text-slate-400">•</span>
+                      <span className="text-xs font-semibold text-slate-600 truncate">{r.department}</span>
+                    </div>
+                    <p className="text-xs text-slate-700 m-0 mb-1 leading-relaxed">{r.description}</p>
+                    <p className="text-[11px] text-slate-500 m-0">
+                      Reported by {r.userName} · {formatDateTime(r.createdAt)} · 📍 {r.address?.formatted || [r.address?.area, r.address?.city].filter(Boolean).join(', ') || `${r.lat.toFixed(4)}, ${r.lng.toFixed(4)}`}
+                      {r.resolvedAt && (
+                        <span className="text-emerald-700 font-semibold"> · Resolved: {formatDateTime(r.resolvedAt)}</span>
+                      )}
+                    </p>
+                    {r.resolutionNotes && (
+                      <div className="mt-1.5 text-[11px] bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg p-1.5 leading-snug">
+                        <strong>Resolution notes:</strong> {r.resolutionNotes}
+                      </div>
+                    )}
                   </div>
-                  <p className="text-xs text-slate-700 m-0 mb-1 leading-relaxed">{r.description}</p>
-                  <p className="text-[11px] text-slate-500 m-0">
-                    Reported by {r.userName} · {formatDate(r.createdAt)} · 📍 {r.address?.formatted || [r.address?.area, r.address?.city].filter(Boolean).join(', ') || `${r.lat.toFixed(4)}, ${r.lng.toFixed(4)}`}
-                  </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   <button
                     className="text-xs font-semibold py-1.5 px-3 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition-colors cursor-pointer"
                     onClick={() => setSelectedReport(r)}
@@ -147,7 +185,7 @@ export default function Admin() {
                     value={r.status}
                     onChange={(e) => setStatus(r.id, e.target.value)}
                     aria-label="Report Status"
-                    className="text-xs font-semibold py-1.5 px-3 rounded-full border border-slate-200 bg-slate-50 w-auto"
+                    className="text-xs font-semibold py-1.5 px-3 rounded-full border border-slate-200 bg-slate-50 w-auto cursor-pointer"
                   >
                     {STATUSES.map((s) => (
                       <option key={s} value={s}>
@@ -186,8 +224,8 @@ export default function Admin() {
                   </span>
                 </div>
                 <p className="text-xs text-slate-700 m-0 mb-1 leading-relaxed">{d.description}</p>
-                <p className="text-[11px] text-slate-400 m-0">
-                  Filed by {d.userName} · {d.supportCount} citizen supporter(s) · {formatDate(d.createdAt)}
+                <p className="text-[11px] text-slate-500 m-0">
+                  Filed by {d.userName} · {d.supportCount} citizen supporter(s) · {formatDateTime(d.createdAt)}
                 </p>
               </div>
 

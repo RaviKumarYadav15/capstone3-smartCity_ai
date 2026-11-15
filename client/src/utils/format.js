@@ -5,6 +5,19 @@ export function formatINR(val) {
   return `₹ ${n.toLocaleString('en-IN')}`;
 }
 export const formatDate = (v) => (v ? new Date(v).toLocaleDateString('en-GB') : '—');
+export const formatDateTime = (v) => {
+  if (!v) return '—';
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleString('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+};
 export const statusLabel = (s) => String(s || '').replace(/_/g, ' ');
 
 export const CATEGORIES = ['Pothole', 'Road Damage', 'Water Leakage', 'Street Lights', 'Garbage', 'Flooding', 'Infrastructure', 'other'];

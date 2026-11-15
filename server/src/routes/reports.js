@@ -360,6 +360,9 @@ router.patch('/:id/status', requireRole('authority', 'admin'), asyncHandler(asyn
     update.resolvedBy = req.user._id;
     update.resolvedAt = new Date();
     if (resolutionNotes) update.resolutionNotes = resolutionNotes;
+  } else {
+    update.resolvedBy = null;
+    update.resolvedAt = null;
   }
 
   const report = await Report.findByIdAndUpdate(req.params.id, update, { new: true });

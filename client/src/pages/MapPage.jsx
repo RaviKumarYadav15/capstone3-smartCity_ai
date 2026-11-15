@@ -114,7 +114,12 @@ export default function MapPage() {
     load();
     api.get('/predictions').then((d) => setPrediction(d.prediction)).catch(() => {});
     const t = setInterval(load, 30000);
-    return () => clearInterval(t);
+    const onFocus = () => load();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener('focus', onFocus);
+    };
   }, [load]);
 
   // Center on saved city when reports/cities are loaded
@@ -224,20 +229,23 @@ export default function MapPage() {
     });
   }, [reports, selectedCity, isNearby5km, userLocation]);
 
-  const visible = reportsInCity.filter(
-    (r) =>
-      filter === 'all' ||
-      r.severity === filter ||
-      r.status === filter ||
-      r.category === filter ||
-      (filter === 'new' && r.status === 'reported')
-  );
+  const visible = reportsInCity.filter((r) => {
+    if (filter === 'all') return true;
+    if (filter === 'critical') return r.severity === 'critical' && r.status !== 'resolved';
+    if (filter === 'high') return r.severity === 'high' && r.status !== 'resolved';
+    if (filter === 'medium') return r.severity === 'medium' && r.status !== 'resolved';
+    if (filter === 'low') return r.severity === 'low' && r.status !== 'resolved';
+    if (filter === 'new') return r.status === 'reported';
+    if (filter === 'resolved') return r.status === 'resolved';
+    if (filter === r.category) return true;
+    return r.status === filter || r.severity === filter;
+  });
 
   const counts = {
     all: reportsInCity.length,
     active: reportsInCity.filter((r) => r.status !== 'resolved').length,
-    critical: reportsInCity.filter((r) => r.severity === 'critical').length,
-    high: reportsInCity.filter((r) => r.severity === 'high').length,
+    critical: reportsInCity.filter((r) => r.severity === 'critical' && r.status !== 'resolved').length,
+    high: reportsInCity.filter((r) => r.severity === 'high' && r.status !== 'resolved').length,
     new: reportsInCity.filter((r) => r.status === 'reported').length,
     resolved: reportsInCity.filter((r) => r.status === 'resolved').length,
   };

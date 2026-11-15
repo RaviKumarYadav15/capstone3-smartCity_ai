@@ -3,7 +3,7 @@ import { api, resolveImageUrl } from '../api.js';
 import { useAuth } from '../AuthContext.jsx';
 import { useToast } from './Toast.jsx';
 import ReportAnalysisModal from './ReportAnalysisModal.jsx';
-import { EMOJI, formatDate, statusLabel } from '../utils/format.js';
+import { EMOJI, formatDate, formatDateTime, statusLabel } from '../utils/format.js';
 import { reverseGeocode } from '../utils/geocode.js';
 
 export default function ReportCard({ report: r, onChange, onLocate }) {
@@ -144,7 +144,7 @@ export default function ReportCard({ report: r, onChange, onLocate }) {
             ) : (
               <span className="font-mono">🎯 GPS: {Number(r.lat).toFixed(4)}, {Number(r.lng).toFixed(4)}</span>
             )}
-            <span>{formatDate(r.createdAt)}</span>
+            <span>{formatDateTime(r.createdAt)}</span>
           </div>
           <div className="meta flex justify-between items-center text-xs text-slate-500 mb-3">
             <span className="font-semibold text-slate-700">{r.userName}</span>
@@ -196,7 +196,7 @@ export default function ReportCard({ report: r, onChange, onLocate }) {
             ) : null}
 
             <span className={`status status-${r.status} ml-auto text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border shrink-0`}>
-              {statusLabel(r.status)}
+              {r.status === 'resolved' ? '✓ Resolved' : r.status === 'verified' ? '✓ Verified' : statusLabel(r.status)}
             </span>
           </div>
 

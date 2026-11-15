@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Circle, Popup, useMap } from 'react-leaflet';
-import { DEFAULT_CENTER, EMOJI, SEVERITY_COLOR } from '../utils/format.js';
+import { DEFAULT_CENTER, EMOJI, SEVERITY_COLOR, formatDateTime } from '../utils/format.js';
 
 export const LAYERS = {
   osm: {
@@ -132,33 +132,77 @@ export default function ReportsMap({
 
       {reports.map((r) => {
         const isTarget = r.id === targetId;
+        const isResolved = r.status === 'resolved';
+        const isVerified = r.status === 'verified';
+
+        // Resolved issues turn emerald green (matching the interactive map guide legend),
+        // community-verified issues turn blue, active issues follow severity color
+        const markerFillColor = isResolved
+          ? '#10b981'
+          : isVerified
+          ? '#2563eb'
+          : SEVERITY_COLOR[r.severity] || '#059669';
+
+        const markerStrokeColor = isTarget
+          ? '#0284c7'
+          : isResolved
+          ? '#047857'
+          : isVerified
+          ? '#1d4ed8'
+          : '#ffffff';
+
         return (
           <CircleMarker
-            key={r.id}
+            key={`${r.id}-${r.status}-${isTarget}`}
             ref={(ref) => {
               if (ref) markerRefs.current[r.id] = ref;
             }}
             center={[r.lat, r.lng]}
-            radius={isTarget ? 15 : 11}
+            radius={isTarget ? 15 : isResolved ? 10 : 11}
             pathOptions={{
-              color: isTarget ? '#0284c7' : '#ffffff',
+              color: markerStrokeColor,
               weight: isTarget ? 3.5 : 2.5,
-              fillColor: SEVERITY_COLOR[r.severity] || '#059669',
-              fillOpacity: isTarget ? 1 : 0.95,
+              fillColor: markerFillColor,
+              fillOpacity: isResolved ? 0.9 : 0.95,
             }}
           >
             <Popup>
-              <div className="p-1 min-w-[180px]">
-                <strong className="text-slate-900 font-bold block mb-1">
-                  {EMOJI[r.category]} {r.category}
-                </strong>
-                <p className="text-xs text-slate-600 m-0 mb-1.5 leading-relaxed">
+              <div className="p-1 min-w-[200px]">
+                <div className="flex items-center justify-between gap-1.5 mb-1.5">
+                  <strong className="text-slate-900 font-bold block text-xs sm:text-sm">
+                    {EMOJI[r.category]} {r.category}
+                  </strong>
+                  <span
+                    className={`capitalize px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider shrink-0 ${
+                      isResolved
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                        : isVerified
+                        ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                        : 'bg-slate-100 text-slate-700 border border-slate-200'
+                    }`}
+                  >
+                    {isResolved ? '✓ Resolved' : isVerified ? '✓ Verified' : r.status.replace(/_/g, ' ')}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 m-0 mb-2 leading-relaxed">
                   {r.description.slice(0, 140)}{r.description.length > 140 ? '…' : ''}
                 </p>
-                <div className="flex items-center justify-between text-xs text-slate-500 font-semibold pt-1 border-t border-slate-100">
+                <div className="flex items-center justify-between text-xs text-slate-500 font-semibold pt-1.5 border-t border-slate-100">
                   <span className="capitalize">{r.severity} Priority</span>
-                  <span className="capitalize px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">{r.status.replace(/_/g, ' ')}</span>
+                  <span className="text-[10px] text-slate-400 font-normal">
+                    {formatDateTime(r.createdAt)}
+                  </span>
                 </div>
+                {isResolved && r.resolvedAt && (
+                  <div className="text-[10px] text-emerald-700 font-semibold mt-1">
+                    ✓ Closed on {formatDateTime(r.resolvedAt)}
+                  </div>
+                )}
+                {r.resolutionNotes && (
+                  <div className="mt-1.5 p-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-900 leading-snug">
+                    <strong className="text-emerald-800">Resolution:</strong> {r.resolutionNotes}
+                  </div>
+                )}
               </div>
             </Popup>
           </CircleMarker>
