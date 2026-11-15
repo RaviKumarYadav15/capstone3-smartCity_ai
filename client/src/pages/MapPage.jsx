@@ -341,49 +341,55 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
 
   return (
     <>
-      {/* Top Scope Bar: Location Dropdown (Takes Most Space) & GUIDE Button (Right Side) Side-by-Side */}
-      <div className="flex items-center gap-3 mb-4 w-full">
-        <select
-          value={selectedCity}
-          onChange={(e) => handleCityChange(e.target.value)}
-          aria-label="Select City"
-          className="flex-1 min-w-0 text-xs sm:text-sm font-bold py-2.5 px-4 rounded-full border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 cursor-pointer shadow-xs focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all truncate"
-        >
-          <option value="all">🌐 All Cities ({reports.length} Total)</option>
-          {detectedCities.map((c) => (
-            <option key={c.name} value={c.name}>
-              📍 {c.name} ({c.count})
-            </option>
-          ))}
-        </select>
+      {/* Top Header Row: Title & Subtitle on Left, City Selector & GUIDE on Right */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 m-0">City Issues Map</h1>
+          <p className="text-xs text-slate-500 m-0 mt-0.5">Real-time public incident, hazard & infrastructure tracking</p>
+        </div>
 
-        {/* Pulsing GUIDE Button on the Right Side */}
-        <button
-          type="button"
-          onClick={() => setShowGuideModal(true)}
-          className="shrink-0 text-xs sm:text-sm font-black py-2.5 px-4 rounded-full border border-blue-300 bg-white hover:bg-blue-50 text-blue-700 cursor-pointer shadow-xs transition-all flex items-center gap-2 select-none"
-          title="Open Citizen SOP & Interactive Map Guide"
-        >
-          <span className="relative flex h-2.5 w-2.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-600"></span>
-          </span>
-          GUIDE
-        </button>
+        <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
+          <select
+            value={selectedCity}
+            onChange={(e) => handleCityChange(e.target.value)}
+            aria-label="Select City"
+            className="text-xs sm:text-sm font-bold py-2 px-4 rounded-full border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 cursor-pointer shadow-xs focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all truncate max-w-[240px]"
+          >
+            <option value="all">🌐 All Cities ({reports.length} Total)</option>
+            {detectedCities.map((c) => (
+              <option key={c.name} value={c.name}>
+                📍 {c.name} ({c.count})
+              </option>
+            ))}
+          </select>
+
+          {/* Pulsing GUIDE Button on the Right Side */}
+          <button
+            type="button"
+            onClick={() => setShowGuideModal(true)}
+            className="shrink-0 text-xs sm:text-sm font-black py-2 px-4 rounded-full border border-blue-300 bg-white hover:bg-blue-50 text-blue-700 cursor-pointer shadow-xs transition-all flex items-center gap-2 select-none"
+            title="Open Citizen SOP & Interactive Map Guide"
+          >
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-600"></span>
+            </span>
+            GUIDE
+          </button>
+        </div>
       </div>
 
+      {error && <p className="error p-3 rounded-xl bg-red-50 border border-red-200 my-2 text-xs">{error}</p>}
+
       {/* Unified Map & Issues Breakdown Container on the Same Horizontal Level */}
-      <section className="bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-sm">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-          {/* Left Side: Map Column */}
-          <div id="live-incident-map" className="lg:col-span-7 xl:col-span-8 flex flex-col justify-between">
-            {/* Header: Title on Left, Locate Me and Layer on Top of the Map! */}
-            <div className="flex flex-wrap items-center justify-between gap-2.5 mb-3">
-              <div>
-                <h1 className="text-xl sm:text-2xl font-black text-slate-900 m-0">City Issues Map</h1>
-                <p className="text-xs text-slate-500 m-0 mt-0.5">Real-time public incident, hazard & infrastructure tracking</p>
-              </div>
-              <div className="flex items-center gap-2 flex-wrap">
+      <section className="bg-white border border-slate-200/90 rounded-3xl p-4 sm:p-5 shadow-sm">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+          {/* Left Side: Map Column (Accommodates Height of Issues Breakdown) */}
+          <div id="live-incident-map" className="lg:col-span-7 xl:col-span-8 flex flex-col justify-between h-full">
+            {/* Map Frame with Controls Floated Directly ON the Map (isolated stacking context, z-[10]) */}
+            <div className="relative rounded-2xl overflow-hidden border border-slate-200 w-full flex-1 min-h-[380px] sm:min-h-[420px] isolate">
+              {/* Floating Controls Directly ON the Map: Locate, Layer & Visible Count */}
+              <div className="absolute top-3 right-3 z-[10] flex items-center gap-2 max-w-[90%] flex-wrap justify-end">
                 {/* Locate 5km Around Me Button ON TOP OF MAP */}
                 <button
                   type="button"
@@ -391,10 +397,10 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
                   disabled={locatingUser}
                   title={isNearby5km ? 'Click to reset back to full view' : 'Locate 5km Around Me'}
                   aria-label="Locate 5km Around Me"
-                  className={`transition-all cursor-pointer flex items-center gap-1.5 py-1.5 px-3.5 rounded-full text-xs font-bold border select-none ${
+                  className={`transition-all cursor-pointer flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-bold border shadow-md select-none backdrop-blur-md ${
                     isNearby5km
-                      ? 'bg-blue-600 text-white border-blue-700 shadow-xs'
-                      : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-300 shadow-2xs'
+                      ? 'bg-blue-600/95 text-white border-blue-700'
+                      : 'bg-white/95 hover:bg-white text-slate-800 border-slate-200/90'
                   }`}
                 >
                   {locatingUser ? (
@@ -405,7 +411,8 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
                   ) : (
                     <>
                       <BiCurrentLocation className={`text-base ${isNearby5km ? 'text-white animate-pulse' : 'text-blue-600'}`} />
-                      <span>Locate 5km Around Me</span>
+                      <span className="hidden sm:inline">Locate 5km</span>
+                      <span className="sm:hidden">5km</span>
                       {isNearby5km && nearby5kmCount > 0 && (
                         <span className="bg-white/25 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">
                           {nearby5kmCount}
@@ -415,12 +422,12 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
                   )}
                 </button>
 
-                {/* Layer selector */}
+                {/* Layer selector ON TOP OF MAP */}
                 <select
                   value={layer}
                   onChange={(e) => setLayer(e.target.value)}
                   aria-label="Map Tile Style"
-                  className="text-xs font-semibold py-1.5 px-2.5 rounded-xl border border-slate-300 bg-white text-slate-700 cursor-pointer shadow-2xs hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  className="text-xs font-semibold py-1.5 px-2.5 rounded-xl border border-slate-200/90 bg-white/95 backdrop-blur-md text-slate-700 cursor-pointer shadow-md hover:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition"
                 >
                   {Object.entries(LAYERS).map(([k, v]) => (
                     <option key={k} value={k}>
@@ -429,16 +436,12 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
                   ))}
                 </select>
 
-                <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-1.5 rounded-full border border-slate-200">
+                {/* Visible Count Badge ON TOP OF MAP */}
+                <span className="text-xs font-bold text-slate-700 bg-white/95 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-slate-200/90 shadow-md shrink-0">
                   {visible.length} visible
                 </span>
               </div>
-            </div>
 
-            {error && <p className="error p-3 rounded-xl bg-red-50 border border-red-200 my-2 text-xs">{error}</p>}
-
-            {/* Map Frame */}
-            <div className="relative rounded-2xl overflow-hidden border border-slate-200 flex-1 min-h-[380px] sm:min-h-[460px] isolate">
               <ReportsMap
                 reports={visible}
                 layer={layer}
@@ -452,7 +455,7 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
               />
             </div>
 
-            <div className="flex items-center justify-between text-xs text-slate-500 mt-2.5 px-1 flex-wrap gap-2">
+            <div className="flex items-center justify-between text-xs text-slate-500 mt-2 px-1 flex-wrap gap-2">
               <span>
                 {isNearby5km && userLocation
                   ? `Showing ${reportsInCity.length} civic reports within 5 km of your GPS location`
@@ -467,7 +470,7 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
           </div>
 
           {/* Right Side: Issues Breakdown Column */}
-          <div className="lg:col-span-5 xl:col-span-4 border-t lg:border-t-0 lg:border-l border-slate-100 lg:pl-6 flex flex-col justify-between">
+          <div className="lg:col-span-5 xl:col-span-4 border-t lg:border-t-0 lg:border-l border-slate-100 lg:pl-5 flex flex-col justify-between h-full">
             <div>
               <div className="mb-3">
                 <h2 className="text-lg font-bold text-slate-900 m-0">
