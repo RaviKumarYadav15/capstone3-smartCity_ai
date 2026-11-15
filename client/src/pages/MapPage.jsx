@@ -341,13 +341,13 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
 
   return (
     <>
-      {/* Top Scope Bar: City Selector & Interactive Guide Button */}
-      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+      {/* Top Scope Bar: Location Dropdown (Takes Most Space) & GUIDE Button (Right Side) Side-by-Side */}
+      <div className="flex items-center gap-3 mb-4 w-full">
         <select
           value={selectedCity}
           onChange={(e) => handleCityChange(e.target.value)}
           aria-label="Select City"
-          className="w-full sm:w-auto text-xs sm:text-sm font-bold py-2 px-4 rounded-full border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 cursor-pointer shadow-xs focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+          className="flex-1 min-w-0 text-xs sm:text-sm font-bold py-2.5 px-4 rounded-full border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 cursor-pointer shadow-xs focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all truncate"
         >
           <option value="all">🌐 All Cities ({reports.length} Total)</option>
           {detectedCities.map((c) => (
@@ -357,11 +357,11 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
           ))}
         </select>
 
-        {/* Pulsing GUIDE Button */}
+        {/* Pulsing GUIDE Button on the Right Side */}
         <button
           type="button"
           onClick={() => setShowGuideModal(true)}
-          className="text-xs sm:text-sm font-black py-2 px-4 rounded-full border border-blue-300 bg-white hover:bg-blue-50 text-blue-700 cursor-pointer shadow-xs transition-all flex items-center gap-2 select-none"
+          className="shrink-0 text-xs sm:text-sm font-black py-2.5 px-4 rounded-full border border-blue-300 bg-white hover:bg-blue-50 text-blue-700 cursor-pointer shadow-xs transition-all flex items-center gap-2 select-none"
           title="Open Citizen SOP & Interactive Map Guide"
         >
           <span className="relative flex h-2.5 w-2.5">
