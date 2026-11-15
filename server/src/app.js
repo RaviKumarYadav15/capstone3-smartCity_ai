@@ -32,7 +32,11 @@ export function createApp() {
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
       const clean = origin.replace(/\/$/, '');
-      if (allowedOrigins.has(clean) || (!env.isProd && clean.startsWith('http://localhost:'))) {
+      if (
+        allowedOrigins.has(clean) ||
+        clean.endsWith('.vercel.app') ||
+        (!env.isProd && clean.startsWith('http://localhost:'))
+      ) {
         return callback(null, true);
       }
       return callback(new HttpError(403, 'CORS: Request origin not allowed'));

@@ -59,5 +59,8 @@ export function sameOrigin(req, _res, next) {
   const cleanClient = (env.clientOrigin || '').replace(/\/$/, '');
   const hostOrigin = `${req.protocol}://${req.get('host')}`.replace(/\/$/, '');
   const allowed = new Set([cleanClient, hostOrigin, 'http://localhost:5173', 'http://127.0.0.1:5173']);
-  return allowed.has(cleanOrigin) ? next() : next(new HttpError(403, 'Cross-origin request blocked'));
+  if (allowed.has(cleanOrigin) || cleanOrigin.endsWith('.vercel.app') || (!env.isProd && cleanOrigin.startsWith('http://localhost:'))) {
+    return next();
+  }
+  return next(new HttpError(403, 'Cross-origin request blocked'));
 }
