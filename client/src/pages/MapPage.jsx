@@ -4,9 +4,9 @@ import { useToast } from '../components/Toast.jsx';
 import ReportsMap, { LAYERS } from '../components/ReportsMap.jsx';
 import ReportCard from '../components/ReportCard.jsx';
 import { getDistanceKm, reverseGeocode } from '../utils/geocode.js';
+import { EMOJI } from '../utils/format.js';
 import {
   BiCurrentLocation,
-  BiCrosshair,
   BiCopy,
   BiCheck,
   BiInfoCircle,
@@ -48,7 +48,6 @@ export default function MapPage() {
   const [cityZoom, setCityZoom] = useState(13);
 
   // Interactive features states
-  const [showHealthBreakdown, setShowHealthBreakdown] = useState(false);
   const [showGrievanceModal, setShowGrievanceModal] = useState(false);
   const [copiedLetter, setCopiedLetter] = useState(false);
 
@@ -229,16 +228,46 @@ export default function MapPage() {
       filter === 'all' ||
       r.severity === filter ||
       r.status === filter ||
+      r.category === filter ||
       (filter === 'new' && r.status === 'reported')
   );
 
   const counts = {
     all: reportsInCity.length,
+    active: reportsInCity.filter((r) => r.status !== 'resolved').length,
     critical: reportsInCity.filter((r) => r.severity === 'critical').length,
     high: reportsInCity.filter((r) => r.severity === 'high').length,
     new: reportsInCity.filter((r) => r.status === 'reported').length,
     resolved: reportsInCity.filter((r) => r.status === 'resolved').length,
   };
+
+  const categoryStats = useMemo(() => {
+    const list = reportsInCity || [];
+    const map = {};
+    for (const r of list) {
+      const cat = r.category || 'other';
+      if (!map[cat]) {
+        map[cat] = { category: cat, total: 0, active: 0, resolved: 0 };
+      }
+      map[cat].total += 1;
+      if (r.status === 'resolved') {
+        map[cat].resolved += 1;
+      } else {
+        map[cat].active += 1;
+      }
+    }
+    return Object.values(map).sort((a, b) => b.active - a.active || b.total - a.total);
+  }, [reportsInCity]);
+
+  const severityStats = useMemo(() => {
+    const list = reportsInCity || [];
+    return {
+      critical: list.filter((r) => r.severity === 'critical' && r.status !== 'resolved').length,
+      high: list.filter((r) => r.severity === 'high' && r.status !== 'resolved').length,
+      medium: list.filter((r) => r.severity === 'medium' && r.status !== 'resolved').length,
+      low: list.filter((r) => r.severity === 'low' && r.status !== 'resolved').length,
+    };
+  }, [reportsInCity]);
 
   const fitBoundsCoords = useMemo(() => {
     if (selectedCity === 'all' && !isNearby5km && reportsInCity.length > 1) {
@@ -249,82 +278,15 @@ export default function MapPage() {
 
   const replace = (updated) => setReports((list) => list.map((r) => (r.id === updated.id ? updated : r)));
 
-  // Dynamic Localized Health Index computation based on reportsInCity
-  const localHealthStats = useMemo(() => {
-    const list = reportsInCity || [];
-    const openCritical = list.filter((r) => r.status !== 'resolved' && r.severity === 'critical').length;
-    const openHigh = list.filter((r) => r.status !== 'resolved' && r.severity === 'high').length;
-    const openOther = list.filter(
-      (r) => r.status !== 'resolved' && r.severity !== 'critical' && r.severity !== 'high'
-    ).length;
-    const resolved = list.filter((r) => r.status === 'resolved').length;
-
-    // Base formula: 100 - openCritical * 15 - openHigh * 8 - openOther * 2
-    const rawScore = 100 - openCritical * 15 - openHigh * 8 - openOther * 2;
-    const score = Math.max(0, Math.min(100, rawScore));
-    const label = score >= 80 ? 'Excellent' : score >= 60 ? 'Good' : score >= 40 ? 'Needs Attention' : 'Critical Risk';
-
-    return {
-      score,
-      label,
-      openCritical,
-      openHigh,
-      openOther,
-      resolved,
-      criticalPenalty: openCritical * 15,
-      highPenalty: openHigh * 8,
-      otherPenalty: openOther * 2,
-    };
-  }, [reportsInCity]);
-
-  const handleFlyToHotspot = () => {
-    if (!prediction) return;
-    const query = (prediction.hotspot || '').toLowerCase();
-
-    // Look for matching report in city
-    let match = reportsInCity.find((r) => {
-      const addr = (r.address?.formatted || '').toLowerCase();
-      const city = (r.address?.city || '').toLowerCase();
-      const desc = (r.description || '').toLowerCase();
-      return query && (addr.includes(query) || city.includes(query) || desc.includes(query));
-    });
-
-    if (!match && query) {
-      match = reports.find((r) => {
-        const addr = (r.address?.formatted || '').toLowerCase();
-        const city = (r.address?.city || '').toLowerCase();
-        const desc = (r.description || '').toLowerCase();
-        return addr.includes(query) || city.includes(query) || desc.includes(query);
-      });
-    }
-
-    if (!match) {
-      match = reportsInCity.find((r) => r.severity === 'critical') || reportsInCity[0];
-    }
-
-    if (match) {
-      setCityCenter([match.lat, match.lng]);
-      setCityZoom(15);
-      setTargetLocation([match.lat, match.lng]);
-      setTargetId(match.id);
-      toast.success(`🎯 Zoomed map to AI Hotspot: ${prediction.hotspot || match.address?.city || 'Hazard Cluster'}`);
-      const el = document.getElementById('live-incident-map');
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } else {
-      toast.error('No incident coordinates found for this hotspot');
-    }
-  };
-
   const generatedGrievanceLetter = useMemo(() => {
-    if (!prediction) return '';
     const dateStr = new Date().toLocaleDateString('en-IN', {
       day: 'numeric',
       month: 'long',
       year: 'numeric',
     });
     const jurisdiction = selectedCity !== 'all' ? selectedCity : 'Smart City Municipal Corporation';
-    const critCount = localHealthStats.openCritical;
-    const highCount = localHealthStats.openHigh;
+    const critCount = severityStats.critical;
+    const highCount = severityStats.high;
 
     return `URGENT CIVIC DIRECTIVE & GRIEVANCE MEMORANDUM
 Date: ${dateStr}
@@ -332,28 +294,25 @@ To:
 The Municipal Commissioner / Chief Engineer (Public Works Department)
 ${jurisdiction} Municipal Corporation
 
-Subject: Formal Escalation Regarding High-Risk Infrastructure Deterioration at ${prediction.hotspot || 'Identified Civic Corridor'}
+Subject: Formal Escalation Regarding High-Risk Civic Infrastructure Defects in ${jurisdiction}
 
 Dear Municipal Authorities,
 
-I am writing to submit an official citizen escalation regarding public safety and civic infrastructure degradation in ${jurisdiction}, supported by empirical real-time civic sensor and incident tracking data.
+I am writing to submit an official citizen escalation regarding public safety and civic infrastructure degradation in ${jurisdiction}, supported by empirical real-time civic incident tracking data.
 
-AI Risk Assessment Summary:
-• Municipal Outlook: ${prediction.prediction || 'Critical deterioration pattern detected.'}
-• Identified Hazard Cluster / Hotspot: ${prediction.hotspot || 'High density civic defect zone'}
-• Critical Unresolved Defects: ${critCount} critical hazard(s), ${highCount} high-priority defect(s)
-• Defect Escalation Trend: ${prediction.trend ? prediction.trend.toUpperCase() : 'INCREASING'}
-• Current Infrastructure Health Index: ${localHealthStats.score}/100 (${localHealthStats.label})
+Civic Incident Overview:
+• Total Registered Incidents: ${counts.all} (${counts.active} open, ${counts.resolved} resolved)
+• Critical Unresolved Defects: ${critCount} critical hazard(s) requiring immediate intervention
+• High-Priority Defect Count: ${highCount} major infrastructure defect(s)
+${prediction?.hotspot ? `• Identified Primary Hotspot: ${prediction.hotspot}` : ''}
+${prediction?.recommendation ? `• Recommended Action: ${prediction.recommendation}` : ''}
 
 Urgent Municipal Intervention Requested:
-${prediction.recommendation || 'Immediate inspection and priority resurfacing/repair deployment requested.'}
-Primary Hazard Requiring Action: ${prediction.urgent || 'Roadway defect / pavement collapse hazard.'}
+Under municipal road safety standards and public grievance service level agreements, we request the immediate dispatch of an inspection crew to inspect and remediate these issues to protect public safety.
 
-Under municipal road safety standards and public grievance service level agreements, we request the immediate dispatch of an inspection crew to mitigate risks of citizen injury and vehicular damage.
-
-Submitted via Smart City AI Civic Intelligence Platform
+Submitted via Smart City Civic Intelligence Platform
 Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
-  }, [prediction, selectedCity, localHealthStats]);
+  }, [selectedCity, counts, severityStats, prediction]);
 
   const copyToClipboard = async (text) => {
     try {
@@ -508,222 +467,249 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
 
         {/* Right Column: Two Rows Showing Live Status of the City */}
         <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-6 justify-between">
-          {/* Row 1: Area Health Index (Dynamic & Interactive) */}
+          {/* Row 1: Area Incident Breakdown (Category-wise & Criticality-wise) */}
           <div className="bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-sm flex-1 flex flex-col justify-between">
             <div>
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-3">
                 <h2 className="text-base sm:text-lg font-bold text-slate-900 m-0">
                   {isNearby5km
-                    ? 'Nearby Health Index'
+                    ? 'Nearby Incident Breakdown'
                     : selectedCity !== 'all'
-                    ? `${selectedCity} Health Index`
-                    : 'Area Health Index'}
+                    ? `${selectedCity} Incident Breakdown`
+                    : 'Area Incident Breakdown'}
                 </h2>
-                <span
-                  className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
-                    localHealthStats.score >= 80
-                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                      : localHealthStats.score >= 60
-                      ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                      : 'bg-red-50 text-red-700 border border-red-200'
-                  }`}
-                >
-                  {localHealthStats.label}
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200">
+                  {counts.all} Total ({counts.active} Open)
                 </span>
               </div>
 
-              <div className="health flex items-baseline gap-2 mb-2">
-                <span className="text-3xl font-black text-slate-900">{localHealthStats.score}</span>
-                <span className="text-xs font-semibold text-slate-500">/ 100</span>
-              </div>
-
-              <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden border border-slate-200 my-2">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${
-                    localHealthStats.score >= 80
-                      ? 'bg-emerald-500'
-                      : localHealthStats.score >= 60
-                      ? 'bg-amber-500'
-                      : 'bg-red-500'
-                  }`}
-                  style={{ width: `${localHealthStats.score}%` }}
-                />
-              </div>
-
-              {/* Interactive Score Impact Badges (Click to Filter Map & Feed) */}
-              <div className="mt-3">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                    Interactive Impact (Click to Filter):
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setShowHealthBreakdown((prev) => !prev)}
-                    className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 cursor-pointer underline flex items-center gap-1"
-                  >
-                    <BiInfoCircle className="text-xs" />
-                    {showHealthBreakdown ? 'Hide Formula' : 'Formula'}
-                  </button>
-                </div>
-
-                <div className="flex flex-wrap gap-1.5">
-                  {localHealthStats.openCritical > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFilter('critical');
-                        toast.success(`Filtered map & feed to ${localHealthStats.openCritical} critical hazard(s)`);
-                        document.getElementById('live-incident-map')?.scrollIntoView({ behavior: 'smooth' });
-                      }}
-                      className={`text-xs px-2.5 py-1 rounded-xl font-bold cursor-pointer transition border flex items-center gap-1 ${
-                        filter === 'critical'
-                          ? 'bg-red-600 text-white border-red-700 shadow-xs'
-                          : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
-                      }`}
-                      title="Click to highlight critical hazards on map"
-                    >
-                      <span>🔴</span> -{localHealthStats.criticalPenalty} pts ({localHealthStats.openCritical} Crit)
-                    </button>
-                  )}
-
-                  {localHealthStats.openHigh > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFilter('high');
-                        toast.success(`Filtered map & feed to ${localHealthStats.openHigh} high priority hazard(s)`);
-                        document.getElementById('live-incident-map')?.scrollIntoView({ behavior: 'smooth' });
-                      }}
-                      className={`text-xs px-2.5 py-1 rounded-xl font-bold cursor-pointer transition border flex items-center gap-1 ${
-                        filter === 'high'
-                          ? 'bg-amber-600 text-white border-amber-700 shadow-xs'
-                          : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
-                      }`}
-                      title="Click to highlight high priority hazards on map"
-                    >
-                      <span>🟠</span> -{localHealthStats.highPenalty} pts ({localHealthStats.openHigh} High)
-                    </button>
-                  )}
-
-                  {localHealthStats.resolved > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFilter('resolved');
-                        toast.success(`Filtered map & feed to ${localHealthStats.resolved} resolved report(s)`);
-                        document.getElementById('live-incident-map')?.scrollIntoView({ behavior: 'smooth' });
-                      }}
-                      className={`text-xs px-2.5 py-1 rounded-xl font-bold cursor-pointer transition border flex items-center gap-1 ${
-                        filter === 'resolved'
-                          ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs'
-                          : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
-                      }`}
-                      title="Click to view resolved community repairs"
-                    >
-                      <span>🟢</span> {localHealthStats.resolved} Restored
-                    </button>
-                  )}
-
+              {/* Criticality / Severity Filter Row */}
+              <div className="mb-3.5">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 flex items-center justify-between">
+                  <span>Criticality Breakdown:</span>
                   {filter !== 'all' && (
                     <button
                       type="button"
                       onClick={() => setFilter('all')}
-                      className="text-xs px-2.5 py-1 rounded-xl font-bold bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200 cursor-pointer"
+                      className="text-[11px] text-blue-600 hover:text-blue-800 font-semibold cursor-pointer underline"
                     >
                       Reset Filter
                     </button>
                   )}
                 </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilter((prev) => (prev === 'critical' ? 'all' : 'critical'));
+                      document.getElementById('live-incident-map')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className={`px-2 py-1.5 rounded-xl font-bold text-xs flex items-center justify-between border cursor-pointer transition ${
+                      filter === 'critical'
+                        ? 'bg-red-600 text-white border-red-700 shadow-xs'
+                        : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
+                    }`}
+                    title="Filter Critical Hazards"
+                  >
+                    <span className="flex items-center gap-1">🔴 Crit</span>
+                    <span className="font-mono text-xs">{severityStats.critical}</span>
+                  </button>
 
-                {/* Expandable Formula Explanation */}
-                {showHealthBreakdown && (
-                  <div className="mt-2.5 p-3 rounded-2xl bg-slate-50 border border-slate-200 text-[11px] text-slate-600 animate-in fade-in duration-200">
-                    <p className="font-bold text-slate-800 mb-1">Health Index Scoring Breakdown:</p>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      <div>• Base Score: <strong className="text-slate-800">100 pts</strong></div>
-                      <div>• Critical Hazard: <strong className="text-red-600">-15 pts each</strong></div>
-                      <div>• High Severity: <strong className="text-amber-600">-8 pts each</strong></div>
-                      <div>• Moderate/Low: <strong className="text-slate-700">-2 pts each</strong></div>
-                    </div>
-                    <p className="mt-1.5 text-slate-500 italic m-0">
-                      Resolved community defects no longer penalize the score, restoring municipal vitality.
-                    </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilter((prev) => (prev === 'high' ? 'all' : 'high'));
+                      document.getElementById('live-incident-map')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className={`px-2 py-1.5 rounded-xl font-bold text-xs flex items-center justify-between border cursor-pointer transition ${
+                      filter === 'high'
+                        ? 'bg-amber-600 text-white border-amber-700 shadow-xs'
+                        : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
+                    }`}
+                    title="Filter High Priority"
+                  >
+                    <span className="flex items-center gap-1">🟠 High</span>
+                    <span className="font-mono text-xs">{severityStats.high}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilter((prev) => (prev === 'medium' ? 'all' : 'medium'));
+                      document.getElementById('live-incident-map')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className={`px-2 py-1.5 rounded-xl font-bold text-xs flex items-center justify-between border cursor-pointer transition ${
+                      filter === 'medium'
+                        ? 'bg-yellow-500 text-white border-yellow-600 shadow-xs'
+                        : 'bg-yellow-50 text-yellow-800 border-yellow-200 hover:bg-yellow-100'
+                    }`}
+                    title="Filter Medium Priority"
+                  >
+                    <span className="flex items-center gap-1">🟡 Med</span>
+                    <span className="font-mono text-xs">{severityStats.medium}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilter((prev) => (prev === 'low' ? 'all' : 'low'));
+                      document.getElementById('live-incident-map')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className={`px-2 py-1.5 rounded-xl font-bold text-xs flex items-center justify-between border cursor-pointer transition ${
+                      filter === 'low'
+                        ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs'
+                        : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                    }`}
+                    title="Filter Low Priority"
+                  >
+                    <span className="flex items-center gap-1">🟢 Low</span>
+                    <span className="font-mono text-xs">{severityStats.low}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Category-wise Breakdown Table */}
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 flex items-center justify-between">
+                  <span>Category Breakdown:</span>
+                  <span className="text-[10px] text-slate-400 font-normal">Click row to filter map</span>
+                </div>
+                {categoryStats.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic py-2">No reports recorded in this area yet.</p>
+                ) : (
+                  <div className="overflow-x-auto max-h-48 overflow-y-auto border border-slate-100 rounded-xl">
+                    <table className="w-full text-xs text-left">
+                      <thead className="text-[10px] uppercase font-bold text-slate-500 bg-slate-50 border-b border-slate-100 sticky top-0">
+                        <tr>
+                          <th className="py-1.5 px-2.5">Category</th>
+                          <th className="py-1.5 px-2 text-center text-amber-700">Open</th>
+                          <th className="py-1.5 px-2 text-center text-emerald-700">Resolved</th>
+                          <th className="py-1.5 px-2 text-right">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {categoryStats.map((c) => {
+                          const isSelected = filter === c.category;
+                          return (
+                            <tr
+                              key={c.category}
+                              onClick={() => {
+                                setFilter((prev) => (prev === c.category ? 'all' : c.category));
+                                document.getElementById('live-incident-map')?.scrollIntoView({ behavior: 'smooth' });
+                              }}
+                              className={`cursor-pointer transition-colors ${
+                                isSelected ? 'bg-blue-50/80 font-bold' : 'hover:bg-slate-50'
+                              }`}
+                            >
+                              <td className="py-1.5 px-2.5 flex items-center gap-1.5 truncate max-w-[150px]">
+                                <span>{EMOJI[c.category] || '⚠️'}</span>
+                                <span className="truncate">{c.category}</span>
+                              </td>
+                              <td className="py-1.5 px-2 text-center font-mono font-semibold text-amber-700">{c.active}</td>
+                              <td className="py-1.5 px-2 text-center font-mono font-semibold text-emerald-700">{c.resolved}</td>
+                              <td className="py-1.5 px-2 text-right font-mono font-bold text-slate-800">{c.total}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="pt-3 border-t border-slate-100 mt-3 flex items-center justify-between text-xs text-slate-500">
-              <span>Active reports: <strong className="text-slate-800">{counts.all}</strong></span>
-              <span>Critical hazards: <strong className="text-red-600">{counts.critical}</strong></span>
+            <div className="pt-2.5 border-t border-slate-100 mt-3 flex items-center justify-between text-xs text-slate-500">
+              <span>Active reports: <strong className="text-slate-800">{counts.active}</strong></span>
+              <span>Critical hazards: <strong className="text-red-600">{severityStats.critical}</strong></span>
             </div>
           </div>
 
-          {/* Row 2: AI Municipal Outlook (Interactive) */}
-          {prediction && (
-            <div className="bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-sm flex-1 flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-base sm:text-lg font-bold text-slate-900 m-0 flex items-center gap-2">
-                    <span>🧠</span> AI Municipal Outlook
-                  </h2>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600 uppercase">
-                      Trend: {prediction.trend}
-                    </span>
-                    {(prediction.riskLevel || prediction.risk_level) && (
-                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full uppercase border ${
-                        (prediction.riskLevel || prediction.risk_level) === 'high' ? 'bg-red-50 text-red-700 border-red-200' :
-                        (prediction.riskLevel || prediction.risk_level) === 'medium' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                        'bg-blue-50 text-blue-700 border-blue-200'
-                      }`}>
-                        Risk: {prediction.riskLevel || prediction.risk_level}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-medium m-0 mt-2">
-                  {prediction.prediction}
-                </p>
-
+          {/* Row 2: Interactive Map Guide (Legend & SOP) */}
+          <div className="bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-sm flex-1 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-2.5">
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 m-0 flex items-center gap-2">
+                  <span>🗺️</span> Interactive Map Guide
+                </h2>
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 uppercase tracking-wider">
+                  Citizen SOP
+                </span>
               </div>
 
-              <div>
-                <div className="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-600 flex flex-col gap-1">
-                  <div>
-                    <strong>Hotspot:</strong> {prediction.hotspot} · <strong>Urgent:</strong> {prediction.urgent}
+              {/* Map Significance (Visual Legend) */}
+              <div className="mb-3">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                  Map Significance (Visual Legend):
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs text-slate-700">
+                  <div className="flex items-start gap-1.5 p-1.5 rounded-lg bg-red-50/60 border border-red-100">
+                    <span className="text-sm shrink-0">🔴</span>
+                    <div className="leading-snug">
+                      <strong className="text-red-700">Critical:</strong> Immediate hazard (open manhole, live wire, collapsed road).
+                    </div>
                   </div>
-                  <div>
-                    <strong>Action:</strong> {prediction.recommendation}
+                  <div className="flex items-start gap-1.5 p-1.5 rounded-lg bg-amber-50/60 border border-amber-100">
+                    <span className="text-sm shrink-0">🟠</span>
+                    <div className="leading-snug">
+                      <strong className="text-amber-800">High / Moderate:</strong> Severe defect needing maintenance.
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-1.5 p-1.5 rounded-lg bg-blue-50/60 border border-blue-100">
+                    <span className="text-sm shrink-0">🔵</span>
+                    <div className="leading-snug">
+                      <strong className="text-blue-700">Verified:</strong> Authenticated by 3 citizens within 250m.
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-1.5 p-1.5 rounded-lg bg-emerald-50/60 border border-emerald-100">
+                    <span className="text-sm shrink-0">🟢</span>
+                    <div className="leading-snug">
+                      <strong className="text-emerald-700">Resolved:</strong> Municipal repair completed and closed.
+                    </div>
                   </div>
                 </div>
+              </div>
 
-                {/* Interactive AI Actions Bar */}
-                <div className="mt-3.5 pt-3 border-t border-slate-100 flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleFlyToHotspot}
-                    className="text-xs font-bold py-1.5 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 flex items-center gap-1.5 cursor-pointer transition shadow-2xs"
-                    title="Center and zoom map to the AI hotspot location"
-                  >
-                    <BiCrosshair className="text-sm" />
-                    Zoom to Hotspot
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowGrievanceModal(true)}
-                    className="text-xs font-bold py-1.5 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 flex items-center gap-1.5 cursor-pointer transition shadow-2xs"
-                    title="Generate formal escalation letter for municipal authorities"
-                  >
-                    <BiFile className="text-sm" />
-                    Draft Grievance Letter
-                  </button>
+              {/* 3-Step Civic SOP */}
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                  3-Step Civic SOP (How to use this page):
+                </p>
+                <div className="flex flex-col gap-1.5 text-xs text-slate-700">
+                  <div className="flex items-start gap-2 p-1.5 rounded-lg bg-slate-50 border border-slate-100">
+                    <span className="font-bold text-blue-600 font-mono shrink-0">1.</span>
+                    <div>
+                      <strong>Locate:</strong> Select your city dropdown or click <em>"Locate 5km Around Me"</em> on the map.
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2 p-1.5 rounded-lg bg-slate-50 border border-slate-100">
+                    <span className="font-bold text-blue-600 font-mono shrink-0">2.</span>
+                    <div>
+                      <strong>Eyewitness Verify:</strong> Walk near an open issue (&lt; 250m) and click <em>Verify</em> to authenticate it for fast authority routing.
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2 p-1.5 rounded-lg bg-slate-50 border border-slate-100">
+                    <span className="font-bold text-blue-600 font-mono shrink-0">3.</span>
+                    <div>
+                      <strong>Escalate:</strong> If an issue remains stagnant, click <em>Draft Grievance Letter</em> to auto-generate a formal complaint to municipal heads.
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          )}
+
+            {/* Retained Action Buttons */}
+            <div className="mt-3.5 pt-3 border-t border-slate-100 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setShowGrievanceModal(true)}
+                className="w-full text-xs font-bold py-2.5 px-4 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 flex items-center justify-center gap-2 cursor-pointer transition shadow-2xs"
+                title="Generate formal escalation letter for municipal authorities"
+              >
+                <BiFile className="text-base" />
+                Draft Grievance Letter
+              </button>
+            </div>
+          </div>
         </div>
       </section>
 
