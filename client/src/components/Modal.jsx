@@ -20,7 +20,7 @@ export default function Modal({ title, onClose, wide, children }) {
 
   return (
     <div
-      className="fixed inset-0 z-[200] overflow-y-auto bg-black/45 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 md:p-8 animate-in fade-in duration-150"
+      className="fixed inset-0 z-[1500] overflow-y-auto bg-black/45 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 md:p-8 animate-in fade-in duration-150"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
       <div

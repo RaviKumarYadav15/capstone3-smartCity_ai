@@ -10,7 +10,6 @@ import {
   BiCopy,
   BiCheck,
   BiInfoCircle,
-  BiCloudRain,
   BiFile,
   BiX,
 } from 'react-icons/bi';
@@ -51,7 +50,6 @@ export default function MapPage() {
   // Interactive features states
   const [showHealthBreakdown, setShowHealthBreakdown] = useState(false);
   const [showGrievanceModal, setShowGrievanceModal] = useState(false);
-  const [monsoonSimulation, setMonsoonSimulation] = useState(false);
   const [copiedLetter, setCopiedLetter] = useState(false);
 
   // Dynamic city aggregation from all fetched reports
@@ -262,11 +260,7 @@ export default function MapPage() {
     const resolved = list.filter((r) => r.status === 'resolved').length;
 
     // Base formula: 100 - openCritical * 15 - openHigh * 8 - openOther * 2
-    let rawScore = 100 - openCritical * 15 - openHigh * 8 - openOther * 2;
-    if (monsoonSimulation) {
-      // Simulate extreme precipitation risk escalation
-      rawScore = Math.max(0, rawScore - 15);
-    }
+    const rawScore = 100 - openCritical * 15 - openHigh * 8 - openOther * 2;
     const score = Math.max(0, Math.min(100, rawScore));
     const label = score >= 80 ? 'Excellent' : score >= 60 ? 'Good' : score >= 40 ? 'Needs Attention' : 'Critical Risk';
 
@@ -281,7 +275,7 @@ export default function MapPage() {
       highPenalty: openHigh * 8,
       otherPenalty: openOther * 2,
     };
-  }, [reportsInCity, monsoonSimulation]);
+  }, [reportsInCity]);
 
   const handleFlyToHotspot = () => {
     if (!prediction) return;
@@ -424,10 +418,10 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
 
           {error && <p className="error p-3 rounded-xl bg-red-50 border border-red-200 my-2 text-xs">{error}</p>}
           
-          {/* Map Frame with Floating Map Controls */}
-          <div className="relative rounded-2xl overflow-hidden border border-slate-200 flex-1 min-h-[380px] sm:min-h-[440px]">
+          {/* Map Frame with Floating Map Controls (isolated stacking context) */}
+          <div className="relative rounded-2xl overflow-hidden border border-slate-200 flex-1 min-h-[380px] sm:min-h-[440px] isolate">
             {/* Top Right Floating Map Style Dropdown on the Map Itself */}
-            <div className="absolute top-3 right-3 z-[500]">
+            <div className="absolute top-3 right-3 z-[30]">
               <select
                 value={layer}
                 onChange={(e) => setLayer(e.target.value)}
@@ -455,7 +449,7 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
             />
 
             {/* Floating 3D Locate 5km Around Me Button on Map */}
-            <div className="absolute bottom-5 right-5 z-[500]">
+            <div className="absolute bottom-5 right-5 z-[30]">
               <button
                 type="button"
                 onClick={handleLocateToggle}
@@ -541,11 +535,6 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
               <div className="health flex items-baseline gap-2 mb-2">
                 <span className="text-3xl font-black text-slate-900">{localHealthStats.score}</span>
                 <span className="text-xs font-semibold text-slate-500">/ 100</span>
-                {monsoonSimulation && (
-                  <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 ml-auto">
-                    🌧️ Rain Risk Model
-                  </span>
-                )}
               </div>
 
               <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden border border-slate-200 my-2">
@@ -698,15 +687,6 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
                   {prediction.prediction}
                 </p>
 
-                {/* Weather Stress Simulation Banner */}
-                {monsoonSimulation && (
-                  <div className="mt-2.5 p-2.5 rounded-xl bg-blue-50/90 border border-blue-200 text-xs text-blue-900 flex items-start gap-2">
-                    <BiCloudRain className="text-lg text-blue-600 shrink-0 mt-0.5" />
-                    <div>
-                      <strong>Monsoon Stress Simulation Active:</strong> Projected +45% waterlogging cavitation along arterial roads. Drainage maintenance required.
-                    </div>
-                  </div>
-                )}
               </div>
 
               <div>
@@ -739,27 +719,6 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
                   >
                     <BiFile className="text-sm" />
                     Draft Grievance Letter
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMonsoonSimulation((prev) => !prev);
-                      toast.success(
-                        !monsoonSimulation
-                          ? 'Monsoon precipitation risk simulation activated'
-                          : 'Returned to standard municipal outlook'
-                      );
-                    }}
-                    className={`text-xs font-bold py-1.5 px-2.5 rounded-xl border flex items-center gap-1 cursor-pointer transition shadow-2xs ${
-                      monsoonSimulation
-                        ? 'bg-blue-600 text-white border-blue-700'
-                        : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
-                    }`}
-                    title="Toggle monsoon rainfall risk stress test"
-                  >
-                    <BiCloudRain className="text-sm" />
-                    {monsoonSimulation ? 'Rain Model On' : 'Rain Model'}
                   </button>
                 </div>
               </div>
@@ -818,7 +777,7 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
 
       {/* Official Grievance Memorandum Modal */}
       {showGrievanceModal && (
-        <div className="fixed inset-0 z-[1200] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[1500] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full p-6 animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5">

@@ -87,7 +87,7 @@ export default function CameraModal({ onCapture, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
+    <div className="fixed inset-0 z-[1500] bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
       <div className="bg-slate-900 border border-slate-700/80 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col relative text-white">
         {/* Header */}
         <div className="p-4 px-5 flex items-center justify-between border-b border-slate-800 bg-slate-900/80">

@@ -56,7 +56,7 @@ export default function AuthModal() {
   return (
     <div
       onClick={closeAuthModal}
-      className="fixed inset-0 z-[200] overflow-y-auto bg-black/45 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-150"
+      className="fixed inset-0 z-[1500] overflow-y-auto bg-black/45 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-150"
     >
       <div
         onClick={(e) => e.stopPropagation()}
