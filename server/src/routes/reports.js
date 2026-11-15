@@ -323,9 +323,10 @@ router.post('/:id/verify', requireAuth, asyncHandler(async (req, res) => {
     const [reportLng, reportLat] = existing.location?.coordinates || [];
     if (typeof reportLat === 'number' && typeof reportLng === 'number') {
       const dist = haversineDistanceKm(lat, lng, reportLat, reportLng);
-      const MAX_VERIFY_DIST_KM = 5;
+      const MAX_VERIFY_DIST_KM = 0.25; // 250 meters physical eyewitness proximity
       if (dist > MAX_VERIFY_DIST_KM) {
-        throw new HttpError(403, `Verification requires physical proximity: you are ${dist.toFixed(1)} km away (maximum allowed: ${MAX_VERIFY_DIST_KM} km)`);
+        const readableDist = dist < 1 ? `${Math.round(dist * 1000)} meters` : `${dist.toFixed(1)} km`;
+        throw new HttpError(403, `Verification requires physical proximity: you must be within 250 meters of the issue on-ground to authenticate it (you are ${readableDist} away)`);
       }
     }
   }

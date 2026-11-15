@@ -230,10 +230,6 @@ export default function Report() {
     );
   }, [toast]);
 
-  useEffect(() => {
-    // Attempt auto-detecting user location seamlessly on mount
-    detect(true);
-  }, [detect]);
 
   const toggleListening = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;

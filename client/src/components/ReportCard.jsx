@@ -55,7 +55,7 @@ export default function ReportCard({ report: r, onChange, onLocate }) {
       return;
     }
     if (!navigator.geolocation) {
-      toast('GPS location required to verify issues near you');
+      toast('GPS location required to verify issues (within 250m)');
       return;
     }
     navigator.geolocation.getCurrentPosition(
@@ -63,7 +63,7 @@ export default function ReportCard({ report: r, onChange, onLocate }) {
         act('verify', { lat: pos.coords.latitude, lng: pos.coords.longitude });
       },
       () => {
-        toast('Please enable GPS location to verify issues near you');
+        toast('Please enable GPS location to verify issues on-ground');
       },
       { timeout: 8000 }
     );
@@ -165,7 +165,7 @@ export default function ReportCard({ report: r, onChange, onLocate }) {
                   : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
               }`}
               disabled={r.iVerified || r.mine}
-              title={r.mine ? 'You cannot verify your own report' : 'Verify this on-ground issue'}
+              title={r.mine ? 'You cannot verify your own report' : 'Verify this on-ground issue (requires physical proximity within 250m)'}
               onClick={handleVerify}
             >
               {r.iVerified ? '✓ You verified' : `Verify (${r.verifications}/3)`}
