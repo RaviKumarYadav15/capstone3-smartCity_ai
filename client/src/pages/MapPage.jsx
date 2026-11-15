@@ -398,122 +398,21 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
           {/* Left Side: Map Column (Accommodates Height of Issues Breakdown) */}
           <div id="live-incident-map" className="lg:col-span-7 xl:col-span-8 flex flex-col justify-between h-full">
-            {/* Map Toolbar Strip (Positioned Directly Above the Map Frame for Clean, Spacious Layout) */}
-            <div className="flex flex-wrap items-center justify-between gap-2.5 mb-3">
-              {/* Left: Status Filter Pills (Unresolved with drilldown, and Resolved) */}
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* Unresolved Control with Dropdown */}
-                <div
-                  className={`rounded-xl border shadow-2xs transition-all flex items-center overflow-hidden ${
-                    filter === 'active' || filter === 'unresolved' || ['critical', 'high', 'medium', 'low', ...categoryStats.map((c) => c.category)].includes(filter)
-                      ? 'bg-amber-500 text-white border-amber-600 ring-2 ring-amber-400/30'
-                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                  }`}
-                >
-                  {/* Direct click button to show all Unresolved */}
-                  <button
-                    type="button"
-                    onClick={() => setFilter((prev) => (prev === 'active' || prev === 'unresolved' ? 'all' : 'active'))}
-                    className={`py-1.5 px-3 text-xs font-bold flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
-                      filter === 'active' || filter === 'unresolved' || ['critical', 'high', 'medium', 'low', ...categoryStats.map((c) => c.category)].includes(filter)
-                        ? 'text-white'
-                        : 'text-slate-800'
-                    }`}
-                    title={filter === 'active' ? 'Click to show all reports' : 'Click to show all Unresolved issues'}
-                  >
-                    <span>⚠️</span>
-                    <span>Unresolved ({counts.active})</span>
-                  </button>
-
-                  {/* Dropdown selector for all criticalities and categories */}
-                  <select
-                    value={
-                      ['critical', 'high', 'medium', 'low', ...categoryStats.map((c) => c.category)].includes(filter)
-                        ? filter
-                        : filter === 'active' || filter === 'unresolved'
-                        ? 'active'
-                        : ''
-                    }
-                    onChange={(e) => {
-                      if (e.target.value) setFilter(e.target.value);
-                    }}
-                    aria-label="Filter Unresolved issues"
-                    className={`text-xs font-semibold py-1.5 pr-2.5 pl-1 border-l cursor-pointer focus:outline-none transition ${
-                      filter === 'active' || filter === 'unresolved' || ['critical', 'high', 'medium', 'low', ...categoryStats.map((c) => c.category)].includes(filter)
-                        ? 'bg-amber-600/60 text-white border-amber-400/40 hover:bg-amber-600/80'
-                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                    }`}
-                    title="Filter Unresolved by Criticality or Category"
-                  >
-                    <option value="active" className="text-slate-800 bg-white">
-                      All Unresolved ({counts.active})
-                    </option>
-                    <option disabled className="text-slate-400 bg-white font-bold text-[10px]">
-                      ── By Criticality ──
-                    </option>
-                    <option value="critical" className="text-slate-800 bg-white">
-                      🔴 Critical ({severityStats.critical})
-                    </option>
-                    <option value="high" className="text-slate-800 bg-white">
-                      🟠 High ({severityStats.high})
-                    </option>
-                    <option value="medium" className="text-slate-800 bg-white">
-                      🟡 Medium ({severityStats.medium})
-                    </option>
-                    <option value="low" className="text-slate-800 bg-white">
-                      🟢 Low ({severityStats.low})
-                    </option>
-                    {categoryStats.length > 0 && (
-                      <>
-                        <option disabled className="text-slate-400 bg-white font-bold text-[10px]">
-                          ── By Category ──
-                        </option>
-                        {categoryStats.map((c) => (
-                          <option key={c.category} value={c.category} className="text-slate-800 bg-white">
-                            {EMOJI[c.category] || '⚠️'} {c.category} ({c.active})
-                          </option>
-                        ))}
-                      </>
-                    )}
-                  </select>
-                </div>
-
-                {/* Resolved Control */}
-                <button
-                  type="button"
-                  onClick={() => setFilter((prev) => (prev === 'resolved' ? 'all' : 'resolved'))}
-                  className={`py-1.5 px-3 rounded-xl text-xs font-bold border shadow-2xs transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
-                    filter === 'resolved'
-                      ? 'bg-emerald-600 text-white border-emerald-700 ring-2 ring-emerald-400/30'
-                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                  }`}
-                  title={filter === 'resolved' ? 'Click to show all reports' : 'Click to show only Resolved issues on the map'}
-                >
-                  <span>🟢</span>
-                  <span>Resolved</span>
-                  <span
-                    className={`text-[11px] font-mono px-1.5 py-0.2 rounded-full font-bold ml-0.5 ${
-                      filter === 'resolved' ? 'bg-white/25 text-white' : 'bg-emerald-100 text-emerald-800'
-                    }`}
-                  >
-                    {counts.resolved}
-                  </span>
-                </button>
-              </div>
-
-              {/* Right: Map Utilities (Locate 5km, Layer Selector, Visible count) */}
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* Locate 5km Around Me Button */}
+            {/* Map Frame with Controls Floated Directly ON the Map (isolated stacking context, z-[10]) */}
+            <div className="relative rounded-2xl overflow-hidden border border-slate-200 w-full flex-1 min-h-[380px] sm:min-h-[420px] isolate">
+              {/* Floating Controls Directly ON the Map: Locate, Layer & Visible Count (Horizontal Single Row) */}
+              <div className="absolute top-3 right-3 z-[10] flex items-center gap-2 flex-nowrap max-w-[calc(100%-60px)]">
+                {/* Locate 5km Around Me Button ON TOP OF MAP */}
                 <button
                   type="button"
                   onClick={handleLocateToggle}
                   disabled={locatingUser}
                   title={isNearby5km ? 'Click to reset back to full view' : 'Locate 5km Around Me'}
                   aria-label="Locate 5km Around Me"
-                  className={`shrink-0 transition-all cursor-pointer flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-bold border shadow-2xs select-none whitespace-nowrap ${
+                  className={`shrink-0 transition-all cursor-pointer flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-bold border shadow-md select-none backdrop-blur-md whitespace-nowrap ${
                     isNearby5km
-                      ? 'bg-blue-600 text-white border-blue-700'
-                      : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-200'
+                      ? 'bg-blue-600/95 text-white border-blue-700'
+                      : 'bg-white/95 hover:bg-white text-slate-800 border-slate-200/90'
                   }`}
                 >
                   {locatingUser ? (
@@ -535,12 +434,12 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
                   )}
                 </button>
 
-                {/* Layer selector */}
+                {/* Layer selector ON TOP OF MAP */}
                 <select
                   value={layer}
                   onChange={(e) => setLayer(e.target.value)}
                   aria-label="Map Tile Style"
-                  className="shrink-0 text-xs font-semibold py-1.5 px-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 cursor-pointer shadow-2xs hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition max-w-[140px] sm:max-w-[170px] truncate"
+                  className="shrink-0 text-xs font-semibold py-1.5 px-2.5 rounded-xl border border-slate-200/90 bg-white/95 backdrop-blur-md text-slate-700 cursor-pointer shadow-md hover:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition max-w-[130px] sm:max-w-[170px] truncate"
                 >
                   {Object.entries(LAYERS).map(([k, v]) => (
                     <option key={k} value={k}>
@@ -549,15 +448,12 @@ Live Incident Tracking Feed: https://smart-city-ai.vercel.app/map`;
                   ))}
                 </select>
 
-                {/* Visible Count Badge */}
-                <span className="shrink-0 text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-1.5 rounded-xl border border-slate-200 shadow-2xs whitespace-nowrap">
+                {/* Visible Count Badge ON TOP OF MAP */}
+                <span className="shrink-0 text-xs font-bold text-slate-700 bg-white/95 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-slate-200/90 shadow-md whitespace-nowrap">
                   {visible.length} visible
                 </span>
               </div>
-            </div>
 
-            {/* Map Frame (Clean, Spacious Canvas) */}
-            <div className="relative rounded-2xl overflow-hidden border border-slate-200 w-full flex-1 min-h-[380px] sm:min-h-[420px] isolate">
               <ReportsMap
                 reports={visible}
                 layer={layer}
