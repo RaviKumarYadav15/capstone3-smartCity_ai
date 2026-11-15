@@ -80,18 +80,25 @@ export default function ReportCard({ report: r, onChange, onLocate }) {
 
   return (
     <article className="bg-white border border-slate-200/90 rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col">
-      {r.imageUrl ? (
-        <img
-          className="report-img w-full h-44 object-cover bg-slate-100"
-          src={resolveImageUrl(r.imageUrl)}
-          alt={`${r.category} reported by ${r.userName}`}
-          loading="lazy"
-        />
-      ) : (
-        <div className="report-img placeholder w-full h-44 grid place-items-center text-4xl bg-slate-50 border-b border-slate-100" aria-hidden>
-          {EMOJI[r.category] || '⚠️'}
-        </div>
-      )}
+      <div className="relative">
+        {r.imageUrl ? (
+          <img
+            className="report-img w-full h-44 object-cover bg-slate-100"
+            src={resolveImageUrl(r.imageUrl)}
+            alt={`${r.category} reported by ${r.userName}`}
+            loading="lazy"
+          />
+        ) : (
+          <div className="report-img placeholder w-full h-44 grid place-items-center text-4xl bg-slate-50 border-b border-slate-100" aria-hidden>
+            {EMOJI[r.category] || '⚠️'}
+          </div>
+        )}
+        {r.iVerified && (
+          <span className="absolute top-3 right-3 bg-blue-600/95 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md backdrop-blur-xs flex items-center gap-1.5 border border-white/20">
+            ✓ Verified by You
+          </span>
+        )}
+      </div>
 
       <div className="p-5 flex flex-col gap-2.5 flex-1 justify-between">
         <div>
@@ -144,7 +151,7 @@ export default function ReportCard({ report: r, onChange, onLocate }) {
             <span className="truncate max-w-[140px] text-right" title={r.department}>{r.department}</span>
           </div>
 
-          <div className="actions flex flex-wrap items-center gap-1.5 pt-2.5 border-t border-slate-100">
+          <div className="actions flex items-center gap-1.5 pt-2.5 border-t border-slate-100">
             <button
               className={`text-xs font-semibold py-1 px-3 rounded-full border transition-all cursor-pointer ${
                 r.myVote === 'up'
@@ -167,19 +174,26 @@ export default function ReportCard({ report: r, onChange, onLocate }) {
             >
               👎 {r.downvotes}
             </button>
-            <button
-              className={`text-xs font-semibold py-1 px-3 rounded-full border transition-all cursor-pointer ${
-                r.iVerified
-                  ? 'bg-sky-50 text-sky-700 border-sky-300 font-bold'
-                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-              }`}
-              disabled={r.iVerified || r.mine}
-              title={r.mine ? 'You cannot verify your own report' : 'Verify this on-ground issue (requires physical proximity within 250m)'}
-              onClick={handleVerify}
-            >
-              {r.iVerified ? '✓ You verified' : `Verify (${r.verifications}/3)`}
-            </button>
-            <span className={`status status-${r.status} ml-auto text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border`}>
+
+            {/* Verification Section: action button if not verified yet, or compact counter if already verified or complete */}
+            {!r.iVerified && r.verifications < 3 && !r.mine ? (
+              <button
+                className="text-xs font-semibold py-1 px-2.5 rounded-full border transition-all cursor-pointer bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+                title="Verify this on-ground issue (requires physical proximity within 250m)"
+                onClick={handleVerify}
+              >
+                Verify ({r.verifications}/3)
+              </button>
+            ) : (
+              <span
+                className="text-[11px] font-semibold text-slate-500 py-1 px-2.5 rounded-full bg-slate-50 border border-slate-200/80 inline-flex items-center gap-1"
+                title={`${r.verifications} on-ground citizen verification(s)`}
+              >
+                👥 {r.verifications}/3 verified
+              </span>
+            )}
+
+            <span className={`status status-${r.status} ml-auto text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border shrink-0`}>
               {statusLabel(r.status)}
             </span>
           </div>
