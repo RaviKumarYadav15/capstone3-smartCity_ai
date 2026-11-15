@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { api } from './api.js';
+import { api, setAuthToken } from './api.js';
 
 const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
@@ -10,11 +10,18 @@ export function AuthProvider({ children }) {
   const [isAuthModalOpen, setAuthModalOpen] = useState(false);
 
   useEffect(() => {
-    api.get('/auth/me').then((d) => setUser(d.user)).catch(() => setUser(null)).finally(() => setLoading(false));
+    api.get('/auth/me')
+      .then((d) => setUser(d.user))
+      .catch(() => {
+        setAuthToken(null);
+        setUser(null);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const login = useCallback(async (email, password) => {
     const res = await api.post('/auth/login', { email, password });
+    if (res?.token) setAuthToken(res.token);
     setUser(res.user);
     setAuthModalOpen(false);
     return res.user;
@@ -22,13 +29,17 @@ export function AuthProvider({ children }) {
 
   const register = useCallback(async (name, email, password) => {
     const res = await api.post('/auth/register', { name, email, password });
+    if (res?.token) setAuthToken(res.token);
     setUser(res.user);
     setAuthModalOpen(false);
     return res.user;
   }, []);
 
   const logout = useCallback(async () => {
-    await api.post('/auth/logout');
+    try {
+      await api.post('/auth/logout');
+    } catch {}
+    setAuthToken(null);
     setUser(null);
   }, []);
 

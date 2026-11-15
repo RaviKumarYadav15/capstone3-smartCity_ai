@@ -24,10 +24,13 @@ export const clearAuthCookie = (res) =>
     secure: env.cookieSecure,
   });
 
-/** Attaches req.user (fresh from DB, so role changes/deletions apply immediately) or null. */
+/** Attaches req.user (fresh from DB, so role changes/deletions apply immediately) or null. Supports both Cookie and Authorization Bearer header. */
 export async function loadUser(req, _res, next) {
   req.user = null;
-  const token = req.cookies?.token;
+  let token = req.cookies?.token;
+  if (!token && req.headers.authorization?.startsWith('Bearer ')) {
+    token = req.headers.authorization.slice(7).trim();
+  }
   if (!token) return next();
   try {
     const { sub, tv } = jwt.verify(token, env.jwtSecret);

@@ -5,7 +5,7 @@ import { BsBuilding, BsShieldCheck } from 'react-icons/bs';
 import { FaUserCheck } from 'react-icons/fa';
 
 export default function AuthModal() {
-  const { isAuthModalOpen, closeAuthModal, login, register } = useAuth();
+  const { isAuthModalOpen, closeAuthModal, login, register, user } = useAuth();
   const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -13,7 +13,25 @@ export default function AuthModal() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const resetForm = () => {
+    setEmail('');
+    setPassword('');
+    setName('');
+    setError('');
+    setLoading(false);
+  };
+
+  // If already authenticated, never keep the modal open
   useEffect(() => {
+    if (user && isAuthModalOpen) {
+      resetForm();
+      closeAuthModal();
+    }
+  }, [user, isAuthModalOpen, closeAuthModal]);
+
+  // Reset form whenever modal opens or closes
+  useEffect(() => {
+    resetForm();
     if (!isAuthModalOpen) return;
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -22,13 +40,19 @@ export default function AuthModal() {
     };
   }, [isAuthModalOpen]);
 
-  if (!isAuthModalOpen) return null;
+  if (!isAuthModalOpen || user) return null;
+
+  const handleClose = () => {
+    resetForm();
+    closeAuthModal();
+  };
 
   const handleDemo = async (demoEmail, demoPass = 'Passw0rd!demo') => {
     setLoading(true);
     setError('');
     try {
       await login(demoEmail, demoPass);
+      resetForm();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -46,6 +70,7 @@ export default function AuthModal() {
       } else {
         await register(name, email, password);
       }
+      resetForm();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -55,15 +80,19 @@ export default function AuthModal() {
 
   return (
     <div
-      onClick={closeAuthModal}
-      className="fixed inset-0 z-[1500] overflow-y-auto bg-black/45 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-150"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) handleClose();
+      }}
+      className="fixed inset-0 z-[1500] overflow-y-auto bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-150"
+      role="dialog"
+      aria-modal="true"
     >
       <div
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-md p-6 sm:p-8 rounded-3xl bg-white shadow-2xl relative border border-slate-100 my-auto animate-in zoom-in-95 duration-150"
       >
         <button
-          onClick={closeAuthModal}
+          onClick={handleClose}
           className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition cursor-pointer absolute top-4 right-4"
           aria-label="Close modal"
         >
@@ -188,6 +217,7 @@ export default function AuthModal() {
             type="button"
             onClick={() => {
               setMode(mode === 'login' ? 'register' : 'login');
+              setPassword('');
               setError('');
             }}
             className="font-semibold text-blue-600 hover:underline cursor-pointer ml-1"

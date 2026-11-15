@@ -6,10 +6,16 @@ import { FaUserAstronaut } from 'react-icons/fa';
 import { HiOutlineLogout } from 'react-icons/hi';
 
 export default function Navbar() {
-  const { user, logout, openAuthModal } = useAuth();
+  const { user, logout, openAuthModal, isAuthModalOpen } = useAuth();
   const [showUserPopUp, setShowUserPopUp] = useState(false);
   const navRef = useRef(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isAuthModalOpen) {
+      setShowUserPopUp(false);
+    }
+  }, [isAuthModalOpen]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -30,7 +36,12 @@ export default function Navbar() {
   };
 
   return (
-    <div className="bg-[#f3f3f3] flex justify-center px-4 pt-6 transition-all relative z-[1000]">
+    <div
+      className={`bg-[#f3f3f3] flex justify-center px-4 pt-6 transition-all relative z-[1000] ${
+        isAuthModalOpen ? 'pointer-events-none select-none' : ''
+      }`}
+      aria-hidden={isAuthModalOpen}
+    >
       <div className="w-full max-w-6xl bg-gradient-to-r from-blue-50 via-blue-100 to-blue-50 rounded-3xl shadow-sm border border-slate-200/90 px-6 sm:px-8 py-3.5 flex justify-between items-center relative transition-all duration-300">
         
         {/* Brand */}

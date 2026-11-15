@@ -12,8 +12,27 @@ export function resolveImageUrl(url) {
   return `${API_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
 }
 
+export function setAuthToken(token) {
+  try {
+    if (token) localStorage.setItem('smartcity_token', token);
+    else localStorage.removeItem('smartcity_token');
+  } catch {}
+}
+
+export function getAuthToken() {
+  try {
+    return localStorage.getItem('smartcity_token');
+  } catch {
+    return null;
+  }
+}
+
 async function request(path, { method = 'GET', body, form } = {}, retries = 1) {
   const opts = { method, credentials: 'include', headers: {} };
+  const token = getAuthToken();
+  if (token) {
+    opts.headers['Authorization'] = `Bearer ${token}`;
+  }
   if (form) opts.body = form; // browser sets the multipart boundary
   else if (body !== undefined) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
   let res;

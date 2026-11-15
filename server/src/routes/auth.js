@@ -23,8 +23,9 @@ router.post('/register', authLimiter, asyncHandler(async (req, res) => {
   if (await User.exists({ email })) throw new HttpError(409, 'An account with this e-mail already exists');
   // role is never taken from the request: everyone registers as a citizen; admins promote via `npm run set-role`
   const user = await User.create({ name, email, passwordHash: await bcrypt.hash(password, 12) });
-  setAuthCookie(res, signToken(user));
-  res.status(201).json({ user: user.toPublic() });
+  const token = signToken(user);
+  setAuthCookie(res, token);
+  res.status(201).json({ user: user.toPublic(), token });
 }));
 
 router.post('/login', authLimiter, asyncHandler(async (req, res) => {
@@ -33,8 +34,9 @@ router.post('/login', authLimiter, asyncHandler(async (req, res) => {
   const hashToCompare = user ? user.passwordHash : DUMMY_HASH;
   const ok = await bcrypt.compare(password, hashToCompare);
   if (!user || !ok) throw new HttpError(401, 'Invalid e-mail or password');
-  setAuthCookie(res, signToken(user));
-  res.json({ user: user.toPublic() });
+  const token = signToken(user);
+  setAuthCookie(res, token);
+  res.json({ user: user.toPublic(), token });
 }));
 
 router.post('/logout', (_req, res) => { clearAuthCookie(res); res.status(204).end(); });
