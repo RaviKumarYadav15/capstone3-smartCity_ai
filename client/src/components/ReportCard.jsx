@@ -175,23 +175,25 @@ export default function ReportCard({ report: r, onChange, onLocate }) {
               👎 {r.downvotes}
             </button>
 
-            {/* Verification Section: action button if not verified yet, or compact counter if already verified or complete */}
-            {!r.iVerified && r.verifications < 3 && !r.mine ? (
-              <button
-                className="text-xs font-semibold py-1 px-2.5 rounded-full border transition-all cursor-pointer bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
-                title="Verify this on-ground issue (requires physical proximity within 250m)"
-                onClick={handleVerify}
-              >
-                Verify ({r.verifications}/3)
-              </button>
-            ) : (
-              <span
-                className="text-[11px] font-semibold text-slate-500 py-1 px-2.5 rounded-full bg-slate-50 border border-slate-200/80 inline-flex items-center gap-1"
-                title={`${r.verifications} on-ground citizen verification(s)`}
-              >
-                👥 {r.verifications}/3 verified
-              </span>
-            )}
+            {/* Verification Section: only available if issue is in 'reported' status */}
+            {r.status === 'reported' ? (
+              !r.iVerified && r.verifications < 3 && !r.mine ? (
+                <button
+                  className="text-xs font-semibold py-1 px-2.5 rounded-full border transition-all cursor-pointer bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+                  title="Verify this on-ground issue (requires physical proximity within 250m)"
+                  onClick={handleVerify}
+                >
+                  Verify ({r.verifications}/3)
+                </button>
+              ) : r.verifications > 0 ? (
+                <span
+                  className="text-[11px] font-semibold text-slate-500 py-1 px-2.5 rounded-full bg-slate-50 border border-slate-200/80 inline-flex items-center gap-1"
+                  title={`${r.verifications} on-ground citizen verification(s)`}
+                >
+                  👥 {r.verifications}/3 verified
+                </span>
+              ) : null
+            ) : null}
 
             <span className={`status status-${r.status} ml-auto text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border shrink-0`}>
               {statusLabel(r.status)}

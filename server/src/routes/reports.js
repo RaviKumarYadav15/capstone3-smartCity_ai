@@ -320,6 +320,9 @@ router.post('/:id/verify', requireAuth, asyncHandler(async (req, res) => {
   const uid = req.user._id;
   const existing = await Report.findById(_id);
   if (!existing) throw new HttpError(404, 'Report not found');
+  if (existing.status !== 'reported') {
+    throw new HttpError(400, 'This issue has already been reviewed and verified');
+  }
   if (String(existing.user) === String(uid)) throw new HttpError(403, 'You cannot verify your own report');
 
   const isStaff = ['admin', 'authority'].includes(req.user.role);
