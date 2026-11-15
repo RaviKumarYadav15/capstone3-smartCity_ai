@@ -37,6 +37,14 @@ export default function ReportCard({ report: r, onChange, onLocate }) {
       openAuthModal();
       return;
     }
+    if (user.isRestricted && (path === 'vote' || path === 'verify')) {
+      toast.error(
+        user.status === 'suspended'
+          ? 'Voting and reactions are paused while your account is in a temporary cooldown.'
+          : 'Voting is disabled due to restricted account standing.'
+      );
+      return;
+    }
     try {
       const res = await api.post(`/reports/${r.id}/${path}`, body);
       onChange(res.report);
@@ -57,6 +65,10 @@ export default function ReportCard({ report: r, onChange, onLocate }) {
   const handleVerify = () => {
     if (!user) {
       openAuthModal();
+      return;
+    }
+    if (user.isRestricted) {
+      toast.error('Ground verifications are disabled while your account is in restricted standing.');
       return;
     }
     if (['admin', 'authority'].includes(user?.role)) {
@@ -157,9 +169,15 @@ export default function ReportCard({ report: r, onChange, onLocate }) {
                 r.myVote === 'up'
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-300 font-bold'
                   : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-              }`}
+              } ${user?.isRestricted ? 'opacity-60 cursor-not-allowed' : ''}`}
               onClick={() => act('vote', { type: 'up' })}
-              title={r.myVote === 'up' ? 'Click again to remove your upvote' : 'Upvote priority'}
+              title={
+                user?.isRestricted
+                  ? 'Voting is disabled while your account is in restricted standing'
+                  : r.myVote === 'up'
+                  ? 'Click again to remove your upvote'
+                  : 'Upvote priority'
+              }
             >
               👍 {r.upvotes}
             </button>
@@ -168,9 +186,15 @@ export default function ReportCard({ report: r, onChange, onLocate }) {
                 r.myVote === 'down'
                   ? 'bg-red-50 text-red-700 border-red-300 font-bold'
                   : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-              }`}
+              } ${user?.isRestricted ? 'opacity-60 cursor-not-allowed' : ''}`}
               onClick={() => act('vote', { type: 'down' })}
-              title={r.myVote === 'down' ? 'Click again to remove your downvote' : 'Downvote'}
+              title={
+                user?.isRestricted
+                  ? 'Voting is disabled while your account is in restricted standing'
+                  : r.myVote === 'down'
+                  ? 'Click again to remove your downvote'
+                  : 'Downvote'
+              }
             >
               👎 {r.downvotes}
             </button>

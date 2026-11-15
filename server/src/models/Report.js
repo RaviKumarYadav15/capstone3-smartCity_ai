@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { CATEGORIES, LEVELS, DEFAULT_STEPS } from '../utils/sanitize.js';
 import { publicImageUrl } from '../utils/image.js';
 
-export const STATUSES = ['reported', 'verified', 'under_review', 'in_progress', 'resolved'];
+export const STATUSES = ['reported', 'verified', 'under_review', 'in_progress', 'resolved', 'rejected'];
 
 const reportSchema = new mongoose.Schema({
   category: { type: String, enum: CATEGORIES, required: true },
@@ -36,6 +36,10 @@ const reportSchema = new mongoose.Schema({
   resolutionNotes: { type: String, maxlength: 1000 },
   resolvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   resolvedAt: Date,
+  rejectionReason: { type: String, maxlength: 1000 },
+  rejectionCategory: { type: String, maxlength: 100 },
+  rejectedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  rejectedAt: Date,
 }, { timestamps: true });
 
 reportSchema.index({ location: '2dsphere' });
@@ -83,6 +87,9 @@ export function serializeReport(doc, userId, userRole = null) {
     mine: isAuthor,
     resolutionNotes: r.resolutionNotes || null,
     resolvedAt: r.resolvedAt || null,
+    rejectionReason: r.rejectionReason || null,
+    rejectionCategory: r.rejectionCategory || null,
+    rejectedAt: r.rejectedAt || null,
     hasLetter: canAccessLetter ? Boolean(r.complaintLetter) : false,
     complaintLetter: canAccessLetter ? (r.complaintLetter || null) : null,
   };

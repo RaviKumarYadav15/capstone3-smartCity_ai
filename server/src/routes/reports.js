@@ -4,8 +4,9 @@ import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { env } from '../config/env.js';
 import { Report, serializeReport, STATUSES } from '../models/Report.js';
+import { User } from '../models/User.js';
 import { asyncHandler, HttpError, escapeRegex } from '../utils/HttpError.js';
-import { requireAuth, requireRole } from '../middleware/auth.js';
+import { requireAuth, requireRole, requireGoodStanding } from '../middleware/auth.js';
 import { imageUpload, saveImage, removeImage } from '../middleware/upload.js';
 import { perUser } from '../middleware/limits.js';
 import { aiEnabled, analyzeIssueImage, writeComplaintLetter } from '../services/gemini.js';
@@ -47,7 +48,12 @@ const createSchema = z.object({
 router.get('/', asyncHandler(async (req, res) => {
   const filter = {};
   const { status, severity, city, bbox } = req.query;
-  if (typeof status === 'string' && STATUSES.includes(status)) filter.status = status;
+  if (typeof status === 'string' && STATUSES.includes(status)) {
+    filter.status = status;
+  } else if (!req.user || !['admin', 'authority'].includes(req.user.role)) {
+    // Hide rejected/fraudulent reports from standard public/citizen feeds and city map
+    filter.status = { $ne: 'rejected' };
+  }
   if (typeof severity === 'string' && LEVELS.includes(severity)) filter.severity = severity;
 
   if (typeof city === 'string' && city.trim()) {
@@ -95,7 +101,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
 }));
 
 // Instant AI image description and category detector
-router.post('/describe', requireAuth, perUser(20), imageUpload, asyncHandler(async (req, res) => {
+router.post('/describe', requireAuth, requireGoodStanding, perUser(20), imageUpload, asyncHandler(async (req, res) => {
   if (!req.file) throw new HttpError(400, 'Please select or upload a photo first');
   const type = detectImageType(req.file.buffer);
   if (!type) throw new HttpError(400, 'Only JPEG, PNG or WebP images are supported');
@@ -148,7 +154,7 @@ router.post('/describe', requireAuth, perUser(20), imageUpload, asyncHandler(asy
   }
 }));
 
-router.post('/', requireAuth, perUser(10), imageUpload, asyncHandler(async (req, res) => {
+router.post('/', requireAuth, requireGoodStanding, perUser(10), imageUpload, asyncHandler(async (req, res) => {
   const body = createSchema.parse(req.body);
   if (!req.file && !body.description) throw new HttpError(400, 'Attach a photo or describe the issue');
 
@@ -245,7 +251,7 @@ router.post('/', requireAuth, perUser(10), imageUpload, asyncHandler(async (req,
   res.status(201).json({ report: serializeReport(report, req.user._id, req.user.role) });
 }));
 
-router.post('/:id/letter', requireAuth, perUser(30), asyncHandler(async (req, res) => {
+router.post('/:id/letter', requireAuth, requireGoodStanding, perUser(30), asyncHandler(async (req, res) => {
   const report = await Report.findById(req.params.id);
   if (!report) throw new HttpError(404, 'Report not found');
   if (String(report.user) !== String(req.user._id)) {
@@ -267,7 +273,7 @@ router.post('/:id/letter', requireAuth, perUser(30), asyncHandler(async (req, re
   res.json({ letter: report.complaintLetter });
 }));
 
-router.put('/:id/letter', requireAuth, asyncHandler(async (req, res) => {
+router.put('/:id/letter', requireAuth, requireGoodStanding, asyncHandler(async (req, res) => {
   const { letter } = z.object({ letter: z.string().max(10000) }).parse(req.body);
   const report = await Report.findById(req.params.id);
   if (!report) throw new HttpError(404, 'Report not found');
@@ -280,7 +286,7 @@ router.put('/:id/letter', requireAuth, asyncHandler(async (req, res) => {
 }));
 
 // One vote per user, toggleable and switchable; atomic update operators, no read-modify-write race.
-router.post('/:id/vote', requireAuth, asyncHandler(async (req, res) => {
+router.post('/:id/vote', requireAuth, requireGoodStanding, asyncHandler(async (req, res) => {
   const { type } = z.object({ type: z.enum(['up', 'down']) }).parse(req.body);
   const _id = req.params.id;
   const uid = req.user._id;
@@ -315,7 +321,7 @@ function haversineDistanceKm(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-router.post('/:id/verify', requireAuth, asyncHandler(async (req, res) => {
+router.post('/:id/verify', requireAuth, requireGoodStanding, asyncHandler(async (req, res) => {
   const _id = req.params.id;
   const uid = req.user._id;
   const existing = await Report.findById(_id);
@@ -350,23 +356,95 @@ router.post('/:id/verify', requireAuth, asyncHandler(async (req, res) => {
 }));
 
 router.patch('/:id/status', requireRole('authority', 'admin'), asyncHandler(async (req, res) => {
-  const { status, resolutionNotes } = z.object({
+  const { status, resolutionNotes, rejectionCategory, rejectionReason } = z.object({
     status: z.enum(STATUSES),
     resolutionNotes: z.string().max(1000).optional(),
+    rejectionCategory: z.enum(['fake_prank', 'spam', 'not_civic', 'duplicate', 'other']).optional(),
+    rejectionReason: z.string().max(1000).optional(),
   }).parse(req.body);
 
+  const existing = await Report.findById(req.params.id);
+  if (!existing) throw new HttpError(404, 'Report not found');
+
   const update = { status };
+
   if (status === 'resolved') {
     update.resolvedBy = req.user._id;
     update.resolvedAt = new Date();
     if (resolutionNotes) update.resolutionNotes = resolutionNotes;
-  } else {
+    update.rejectedBy = null;
+    update.rejectedAt = null;
+    update.rejectionCategory = null;
+    update.rejectionReason = null;
+  } else if (status === 'rejected') {
+    update.rejectedBy = req.user._id;
+    update.rejectedAt = new Date();
+    update.rejectionCategory = rejectionCategory || 'fake_prank';
+    update.rejectionReason = rejectionReason || 'Report verified as false or invalid by municipal authority.';
     update.resolvedBy = null;
     update.resolvedAt = null;
+
+    // Apply strike to the citizen author unless marked as duplicate
+    if (existing.status !== 'rejected' && existing.user && rejectionCategory !== 'duplicate') {
+      const author = await User.findById(existing.user);
+      if (author && author.role === 'citizen') {
+        author.strikes = (author.strikes || 0) + 1;
+        author.strikeHistory = author.strikeHistory || [];
+        author.strikeHistory.push({
+          reason: rejectionCategory || 'fake_prank',
+          note: rejectionReason || 'Report rejected as false or invalid by municipal authority.',
+          reportId: existing._id,
+          reportTitle: `${existing.category} · ${existing.address?.city || existing.address?.formatted || 'Incident location'}`,
+          createdAt: new Date(),
+          appliedBy: req.user._id,
+          appliedByName: req.user.name,
+        });
+
+        if (author.strikes === 1) {
+          author.status = 'warned';
+        } else if (author.strikes === 2) {
+          author.status = 'suspended';
+          author.suspendedUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7-day cooldown
+        } else if (author.strikes >= 3) {
+          author.status = 'banned';
+          author.isBlocked = true;
+          author.blockReason = 'Indefinite restriction: 3 or more verified false or invalid reports.';
+        }
+        await author.save();
+      }
+    }
+  } else {
+    // If previously rejected, reverse the strike upon changing to an active/investigative status
+    if (existing.status === 'rejected' && existing.user && existing.rejectionCategory !== 'duplicate') {
+      const author = await User.findById(existing.user);
+      if (author && author.strikes > 0) {
+        author.strikes = Math.max(0, author.strikes - 1);
+        author.strikeHistory = (author.strikeHistory || []).filter(
+          (s) => String(s.reportId) !== String(existing._id)
+        );
+        if (author.strikes === 0) {
+          author.status = 'active';
+          author.isBlocked = false;
+          author.suspendedUntil = null;
+        } else if (author.strikes === 1) {
+          author.status = 'warned';
+          author.isBlocked = false;
+          author.suspendedUntil = null;
+        } else if (author.strikes === 2) {
+          author.status = 'suspended';
+        }
+        await author.save();
+      }
+    }
+    update.resolvedBy = null;
+    update.resolvedAt = null;
+    update.rejectedBy = null;
+    update.rejectedAt = null;
+    update.rejectionCategory = null;
+    update.rejectionReason = null;
   }
 
   const report = await Report.findByIdAndUpdate(req.params.id, update, { new: true });
-  if (!report) throw new HttpError(404, 'Report not found');
   res.json({ report: serializeReport(report, req.user._id, req.user.role) });
 }));
 

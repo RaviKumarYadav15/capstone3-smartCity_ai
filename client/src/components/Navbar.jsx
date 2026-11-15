@@ -146,9 +146,26 @@ export default function Navbar() {
                   <div className="mb-3 border-b border-slate-100 pb-3">
                     <p className="font-bold text-slate-800 text-sm truncate">{user.name}</p>
                     <p className="text-xs text-slate-500 truncate">{user.email}</p>
-                    <span className="inline-block mt-1 text-[10px] uppercase font-extrabold tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                      {user.role}
-                    </span>
+                    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                      <span className="text-[10px] uppercase font-extrabold tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                        {user.role}
+                      </span>
+                      {user.role === 'citizen' && (
+                        user.isRestricted ? (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200">
+                            {user.status === 'suspended' ? '🟠 Suspended' : '🔴 Restricted'} ({user.strikes || 0}/3)
+                          </span>
+                        ) : user.status === 'warned' ? (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                            🟡 1 Strike (Warning)
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            🟢 Good Standing
+                          </span>
+                        )
+                      )}
+                    </div>
                   </div>
 
                   <button

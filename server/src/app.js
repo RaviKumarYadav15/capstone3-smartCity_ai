@@ -15,6 +15,7 @@ import reportRoutes from './routes/reports.js';
 import tenderRoutes from './routes/tenders.js';
 import disputeRoutes from './routes/disputes.js';
 import statsRoutes from './routes/stats.js';
+import userRoutes from './routes/users.js';
 
 export function createApp() {
   const app = express();
@@ -80,6 +81,7 @@ export function createApp() {
 
   app.get('/api/health', (_req, res) => res.json({ ok: true }));
   app.use('/api/auth', authRoutes);
+  app.use('/api/users', userRoutes);
   app.use('/api/reports', reportRoutes);
   app.use('/api/tenders', tenderRoutes);
   app.use('/api/disputes', disputeRoutes);

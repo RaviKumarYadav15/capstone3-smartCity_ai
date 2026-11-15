@@ -18,11 +18,11 @@ export const formatDateTime = (v) => {
     hour12: true,
   });
 };
-export const statusLabel = (s) => String(s || '').replace(/_/g, ' ');
+export const statusLabel = (s) => (s === 'rejected' ? 'Rejected / Invalid' : String(s || '').replace(/_/g, ' '));
 
 export const CATEGORIES = ['Pothole', 'Road Damage', 'Water Leakage', 'Street Lights', 'Garbage', 'Flooding', 'Infrastructure', 'other'];
 export const EMOJI = { Pothole: '🕳️', 'Road Damage': '🛣️', 'Water Leakage': '💧', 'Street Lights': '💡', Garbage: '🗑️', Flooding: '🌊', Infrastructure: '🏗️', other: '⚠️' };
 export const SEVERITY_COLOR = { critical: '#ff4757', high: '#ff8c42', medium: '#ffd166', low: '#06d6a0' };
-export const STATUSES = ['reported', 'verified', 'under_review', 'in_progress', 'resolved'];
+export const STATUSES = ['reported', 'verified', 'under_review', 'in_progress', 'resolved', 'rejected'];
 export const DISPUTE_CATEGORIES = ['Substandard Material Quality', 'Abandoned / Delayed Work', 'Ghost Project', 'Warranty Defect', 'Other'];
 export const DEFAULT_CENTER = [11.3410, 77.7172];

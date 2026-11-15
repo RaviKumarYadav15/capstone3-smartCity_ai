@@ -50,6 +50,25 @@ export const requireRole = (...roles) => (req, _res, next) => {
   next();
 };
 
+/**
+ * Ensures user has active standing (not suspended, banned, or manually blocked).
+ * Exempts administrative and municipal authority roles.
+ */
+export const requireGoodStanding = (req, _res, next) => {
+  if (!req.user) return next(new HttpError(401, 'Please sign in'));
+  if (['admin', 'authority'].includes(req.user.role)) return next();
+
+  const restriction = req.user.getRestrictionStatus ? req.user.getRestrictionStatus() : { isRestricted: false };
+  if (restriction.isRestricted) {
+    const until = restriction.suspendedUntil ? new Date(restriction.suspendedUntil).toLocaleDateString() : null;
+    const msg = restriction.status === 'suspended' && until
+      ? `Your reporting and interaction privileges are temporarily suspended until ${until} due to repeated false/invalid reports.`
+      : `Your account privileges are currently restricted. Reason: ${restriction.reason || 'Restricted standing.'}`;
+    return next(new HttpError(403, msg));
+  }
+  next();
+};
+
 /** Cookie auth + state-changing request: reject cross-site Origins (defence in depth on top of SameSite). */
 export function sameOrigin(req, _res, next) {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();

@@ -438,10 +438,100 @@ export default function Report() {
           </div>
         </div>
 
-        {/* Right Side: Form */}
+        {/* Right Side: Form or Account Restriction Notice */}
         <div className="md:col-span-7 p-6 sm:p-10 bg-white flex flex-col justify-center">
-          <form onSubmit={submit} className="form flex flex-col gap-6">
-            {/* Step 1: Photo Evidence */}
+          {user?.isRestricted ? (
+            <div className="flex flex-col items-center text-center p-4 sm:p-6 max-w-lg mx-auto">
+              <div className="w-16 h-16 rounded-3xl bg-red-100 text-red-600 flex items-center justify-center text-3xl mb-4 shadow-sm">
+                🛡️
+              </div>
+              <span className={`text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-full mb-3 border ${
+                user.status === 'suspended'
+                  ? 'bg-amber-50 text-amber-800 border-amber-300'
+                  : 'bg-red-50 text-red-800 border-red-300'
+              }`}>
+                {user.status === 'suspended' ? '7-Day Temporary Cooldown' : 'Account Indefinitely Restricted'}
+              </span>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 mb-2">
+                {user.status === 'suspended'
+                  ? 'Reporting Privileges Temporarily Suspended'
+                  : 'Reporting Privileges Restricted'}
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-600 mb-4 leading-relaxed">
+                {user.restrictionReason ||
+                  'Your account has accumulated repeated strikes for submitting false, invalid, or non-civic reports verified by municipal authorities.'}
+              </p>
+
+              {user.suspendedUntil && user.status === 'suspended' && (
+                <div className="w-full bg-amber-50/80 border border-amber-200 rounded-2xl p-3.5 mb-5 text-left">
+                  <div className="text-xs font-bold text-amber-900 flex items-center gap-1.5 mb-1">
+                    <span>⏱️</span>
+                    <span>Cooldown In Effect</span>
+                  </div>
+                  <p className="text-xs text-amber-800 m-0">
+                    Your reporting privileges will automatically resume on:{' '}
+                    <strong>{new Date(user.suspendedUntil).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</strong>.
+                  </p>
+                </div>
+              )}
+
+              {user.strikeHistory && user.strikeHistory.length > 0 && (
+                <div className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 mb-6 text-left">
+                  <div className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 flex justify-between items-center">
+                    <span>Recorded Strikes ({user.strikes || user.strikeHistory.length}/3):</span>
+                    <span className="text-[10px] text-red-600 font-semibold">Policy: 2 = 7d Cooldown, 3 = Ban</span>
+                  </div>
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {user.strikeHistory.map((s, idx) => (
+                      <div key={idx} className="bg-white p-2.5 rounded-xl border border-slate-200 text-xs">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <span className="font-bold text-slate-800 capitalize">
+                            Strike {idx + 1}: {s.reason.replace(/_/g, ' ')}
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            {new Date(s.createdAt).toLocaleDateString('en-GB')}
+                          </span>
+                        </div>
+                        {s.note && <p className="text-slate-600 text-[11px] m-0 mb-1">{s.note}</p>}
+                        {s.reportTitle && (
+                          <div className="text-[10px] text-slate-400 truncate">
+                            Incident: {s.reportTitle}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row gap-3 w-full">
+                <Link
+                  to="/map"
+                  className="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs py-3 px-5 rounded-full transition shadow-xs text-center"
+                >
+                  View City Issues Map
+                </Link>
+                <a
+                  href={`mailto:support@smartcity.gov?subject=Civic%20Account%20Appeal%20-%20${encodeURIComponent(user.email)}`}
+                  className="flex-1 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-semibold text-xs py-3 px-5 rounded-full transition shadow-2xs text-center"
+                >
+                  Appeal to Administration
+                </a>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={submit} className="form flex flex-col gap-6">
+              {/* Warning Notice Banner for 1-Strike Users */}
+              {user?.status === 'warned' && (
+                <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-3 shadow-2xs">
+                  <span className="text-base shrink-0">⚠️</span>
+                  <div className="leading-relaxed">
+                    <strong className="font-bold">Account Notice (1 Warning Strike):</strong> An earlier report submitted from this account was flagged as invalid or false. A second strike will activate an automatic 7-day cooldown on reporting and voting privileges. Please verify all incidents before submission.
+                  </div>
+                </div>
+              )}
+
+              {/* Step 1: Photo Evidence */}
             <div>
               <label className="text-sm font-bold text-slate-800 block mb-2">
                 Step 1: Photo Evidence {!aiEnabled && '(Optional)'}
@@ -861,6 +951,7 @@ export default function Report() {
             </button>
           </fieldset>
         </form>
+          )}
         </div>
       </section>
 
